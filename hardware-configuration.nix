@@ -16,18 +16,33 @@
   fileSystems."/" =
     { device = "/dev/disk/by-uuid/3c2d502a-4144-4b9f-b196-38114e73ab53";
       fsType = "btrfs";
-      options = [ "subvol=@" ];
+      options = [ "subvol=nixos-root" ];
+    };
+
+  fileSystems."/home" =
+    { device = "/dev/disk/by-uuid/3c2d502a-4144-4b9f-b196-38114e73ab53";
+      fsType = "btrfs";
+      options = [ "subvol=nixos-home" ];
     };
 
   fileSystems."/boot" =
-    { device = "/dev/disk/by-uuid/e32a2cb0-b7d1-46d9-b8ce-7c9e1f68a870";
-      fsType = "ext4";
-    };
-
-  fileSystems."/boot/efi" =
     { device = "/dev/disk/by-uuid/C18C-848C";
       fsType = "vfat";
     };
+
+  fileSystems."/mnt/backup_ssd" =
+    { device = "/dev/disk/by-uuid/f86a0417-2560-452b-9074-84a75739e41e";
+      fsType = "btrfs";
+      options = [ "subvolid=5" "nofail" "x-systemd.automount" "x-systemd.device-timeout=1ms" "x-systemd.idle-timeout=1min" ];
+    };
+
+  fileSystems."/mnt/btr_pool" =
+    { device = "/dev/disk/by-uuid/3c2d502a-4144-4b9f-b196-38114e73ab53";
+      fsType = "btrfs";
+      options = [ "subvolid=5" "noatime" ];
+    };
+
+
 
   swapDevices = [ ];
 

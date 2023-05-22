@@ -8,12 +8,16 @@
   imports =
     [ # Include the results of the hardware scan.
       ./hardware-configuration.nix
+      ./backup-configurations.nix
+      ./timer-configuration.nix
     ];
+
+  nix.settings.experimental-features = [ "nix-command" "flakes" ];
 
   # Bootloader.
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
-  boot.loader.efi.efiSysMountPoint = "/boot/efi";
+  boot.loader.efi.efiSysMountPoint = "/boot";
 
   # Kernel version
   boot.kernelPackages = pkgs.linuxPackages_latest;
@@ -46,15 +50,14 @@
     LC_TIME = "nl_NL.UTF-8";
   };
 
+  console.useXkbConfig = true;
+
   # Enable the X11 windowing system.
-  # services.xserver.enable = true;
 
   # Enable the GNOME Desktop Environment.
   # services.xserver.displayManager.gdm.enable = true;
   # services.xserver.desktopManager.gnome.enable = true;
   
-  console.useXkbConfig = true;
-
   services.xserver = {
     enable = true;
 
@@ -65,11 +68,14 @@
 	      noDesktop = true;
 	      enableXfwm = false;
       };
+      gnome = {
+              enable = true;
+      };
     };
    
     displayManager = {
 	    gdm.enable = true;
-	    defaultSession = "none+i3";
+	    defaultSession = "xfce+i3";
     };
 
     windowManager.i3 = {
@@ -87,8 +93,8 @@
   services.xserver = {
     layout = "us";
     xkbVariant = "euro";
-    xkbOptions = "compose:caps";
-    autoRepeatDelay = 200;
+    #xkbOptions = "compose:caps";
+    autoRepeatDelay = 500;
     autoRepeatInterval = 70;
   };
 
@@ -96,6 +102,9 @@
 
   # Enable CUPS to print documents.
   services.printing.enable = true;
+
+  # st-link usb devices
+  services.udev.packages = [ pkgs.stlink ];
 
   # Enable sound with pipewire.
   sound.enable = true;
@@ -121,7 +130,7 @@
   users.users.ruben = {
     isNormalUser = true;
     description = "Ruben";
-    extraGroups = [ "networkmanager" "wheel" ];
+    extraGroups = [ "docker" "networkmanager" "wheel" ];
     packages = with pkgs; [
       firefox
     #  thunderbird
@@ -129,17 +138,20 @@
   };
 
   virtualisation.docker.enable = true;
+  virtualisation.docker.storageDriver = "btrfs";
 
   # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
+
+  environment.variables = { EDITOR = "vim"; };
 
   environment.pathsToLink = [ "/libexec" ]; # links /libexec from derivations to /run/current-system/sw 
 
   # List packages installed in system profile. To search, run:
   # $ nix search wget
   environment.systemPackages = with pkgs; [
-  #  vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
-  #  wget
+    vim
+    wget
   ];
 
   # Some programs need SUID wrappers, can be configured further or are
