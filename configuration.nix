@@ -96,9 +96,9 @@
 
   # Configure keymap in X11
   services.xserver = {
-    layout = "us";
+    layout = "us,se";
     xkbVariant = "euro";
-    #xkbOptions = "compose:caps";
+    xkbOptions = "grp:ctrls_toggle";
     autoRepeatDelay = 500;
     autoRepeatInterval = 70;
   };
