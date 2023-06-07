@@ -80,7 +80,7 @@
    
     displayManager = {
 	    gdm.enable = true;
-	    defaultSession = "xfce+i3";
+#defaultSession = "xfce+i3";
     };
 
     windowManager.i3 = {
@@ -115,6 +115,7 @@
   sound.enable = true;
   hardware.pulseaudio.enable = false;
   security.rtkit.enable = true;
+  security.polkit.enable = true;
   services.pipewire = {
     enable = true;
     alsa.enable = true;
@@ -135,11 +136,13 @@
   users.users.ruben = {
     isNormalUser = true;
     description = "Ruben";
-    extraGroups = [ "docker" "networkmanager" "wheel" ];
-    packages = with pkgs; [
-      firefox
-    #  thunderbird
-    ];
+    extraGroups = [ "docker" "networkmanager" "wheel" "dialout" "adb" ];
+  };
+
+  users.users.teczito = {
+    isNormalUser = true;
+    description = "Teczito";
+    extraGroups = [ "docker" "networkmanager" "wheel" "dialout" "adb" ];
   };
 
   virtualisation.docker.enable = true;
@@ -155,9 +158,13 @@
   # List packages installed in system profile. To search, run:
   # $ nix search wget
   environment.systemPackages = with pkgs; [
+    tdesktop
     vim
     wget
+    screen
   ];
+
+  programs.adb.enable = true;
 
   # Some programs need SUID wrappers, can be configured further or are
   # started in user sessions.
