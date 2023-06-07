@@ -162,6 +162,12 @@
     vim
     wget
     screen
+    redshift
+    git
+    git-cola
+    brave
+    mc
+    btrbk
   ];
 
   programs.adb.enable = true;
