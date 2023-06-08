@@ -20,6 +20,7 @@
       system = "x86_64-linux";
       # modules to use
       modules = [
+        ./users
         ./configuration.nix # our previous config file
         inputs.home-manager.nixosModules.home-manager # make home manager available to configuration.nix
         {

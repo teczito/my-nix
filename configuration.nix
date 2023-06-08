@@ -132,19 +132,6 @@
   # Enable touchpad support (enabled default in most desktopManager).
   # services.xserver.libinput.enable = true;
 
-  # Define a user account. Don't forget to set a password with ‘passwd’.
-  users.users.ruben = {
-    isNormalUser = true;
-    description = "Ruben";
-    extraGroups = [ "docker" "networkmanager" "wheel" "dialout" "adb" ];
-  };
-
-  users.users.teczito = {
-    isNormalUser = true;
-    description = "Teczito";
-    extraGroups = [ "docker" "networkmanager" "wheel" "dialout" "adb" ];
-  };
-
   virtualisation.docker.enable = true;
   virtualisation.docker.storageDriver = "btrfs";
 
@@ -162,6 +149,7 @@
     vim
     wget
     screen
+    minicom
     redshift
     git
     git-cola
