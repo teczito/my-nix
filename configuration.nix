@@ -58,31 +58,26 @@
   console.useXkbConfig = true;
 
   # Enable the X11 windowing system.
-
-  # Enable the GNOME Desktop Environment.
-  # services.xserver.displayManager.gdm.enable = true;
-  # services.xserver.desktopManager.gnome.enable = true;
-  
   services.xserver = {
     enable = true;
+
+    displayManager = {
+#gdm.enable = true;
+      sddm.enable = true;
+    };
 
     desktopManager = {
       xterm.enable = true;
       xfce = {
 	      enable =  true;
-	      noDesktop = true;
+	      noDesktop = false; # false = default
 	      enableXfwm = false;
       };
       gnome = {
-              enable = true;
+        enable = true;
       };
     };
    
-    displayManager = {
-	    gdm.enable = true;
-#defaultSession = "xfce+i3";
-    };
-
     windowManager.i3 = {
       enable = true;
       extraPackages = with pkgs; [
@@ -92,6 +87,16 @@
         i3blocks #if you are planning on using i3blocks over i3status
      ];
     };
+
+    windowManager.awesome = {
+      enable = true;
+      luaModules = with pkgs.luaPackages; [
+        luarocks # is the package manager for Lua modules
+        luadbi-mysql # Database abstraction layer
+      ];
+
+    };
+
   };
 
   # Configure keymap in X11
@@ -157,6 +162,9 @@
     mc
     btrbk
   ];
+
+  programs.thunar.enable = true;
+
 
   programs.adb.enable = true;
 
