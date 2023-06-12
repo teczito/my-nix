@@ -21,6 +21,7 @@
       # modules to use
       modules = [
         ./users
+        ./apps
         ./configuration.nix # our previous config file
         inputs.home-manager.nixosModules.home-manager # make home manager available to configuration.nix
         {

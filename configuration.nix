@@ -134,9 +134,6 @@
     #media-session.enable = true;
   };
 
-  # Enable touchpad support (enabled default in most desktopManager).
-  # services.xserver.libinput.enable = true;
-
   virtualisation.docker.enable = true;
   virtualisation.docker.storageDriver = "btrfs";
 
@@ -150,6 +147,7 @@
   # List packages installed in system profile. To search, run:
   # $ nix search wget
   environment.systemPackages = with pkgs; [
+    php
     tdesktop
     vim
     wget
