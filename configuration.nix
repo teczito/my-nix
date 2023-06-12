@@ -62,8 +62,8 @@
     enable = true;
 
     displayManager = {
-#gdm.enable = true;
-      sddm.enable = true;
+    gdm.enable = true;
+    #sddm.enable = true;
     };
 
     desktopManager = {
@@ -91,8 +91,8 @@
     windowManager.awesome = {
       enable = true;
       luaModules = with pkgs.luaPackages; [
-        luarocks # is the package manager for Lua modules
-        luadbi-mysql # Database abstraction layer
+        luarocks
+        luadbi
       ];
 
     };
@@ -164,9 +164,8 @@
   ];
 
   programs.thunar.enable = true;
-
-
   programs.adb.enable = true;
+  programs.dconf.enable = true;
 
   # Some programs need SUID wrappers, can be configured further or are
   # started in user sessions.
