@@ -10,7 +10,10 @@
 
   home-manager.users.ruben = { pkgs, config, ... }: {
     home.stateVersion = "23.05";  
-    home.packages =  with pkgs; [ htop ];
+    home.packages =  with pkgs; [
+        pkgs.eclipses.eclipse-cpp
+        htop
+    ];
 
     programs.git = {
       enable = true;
@@ -35,6 +38,13 @@
         init = {
           defaultBranch = "main";
         };
+      };
+    };
+
+    wayland.windowManager.sway = {
+      enable = true;
+      config = rec {
+          modifier = "Mod4";
       };
     };
   };

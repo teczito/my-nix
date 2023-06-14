@@ -41,7 +41,8 @@ in {
     isSystemUser = true;
     createHome = true;
     home = dataDir;
-    group  = app;
+    homeMode = "755";
+    group = app;
   };
   users.groups.${app} = {};
 }
