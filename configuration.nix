@@ -96,7 +96,6 @@
       ];
 
     };
-
   };
 
   # Configure keymap in X11
@@ -106,6 +105,24 @@
     xkbOptions = "grp:ctrls_toggle";
     autoRepeatDelay = 500;
     autoRepeatInterval = 70;
+  };
+
+  location = {
+    provider = "manual";
+    latitude = 51.4866;
+    longitude = 3.9621;
+  };
+
+  services.redshift = {
+    enable = true;
+    brightness = {
+      day = "1";
+      night = "1";
+    };
+    temperature = {
+      day = 5500;
+      night = 3700;
+    };
   };
 
   services.xserver.libinput.touchpad.naturalScrolling = true;

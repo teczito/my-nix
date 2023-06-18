@@ -13,6 +13,7 @@
     home.packages =  with pkgs; [
         htop
         speedcrunch
+        eclipses.eclipse-cpp
     ];
 
     programs.git = {
@@ -57,13 +58,6 @@
         alias portenta='cd /home/teczito/northvolt/portenta/httpd-server/'
         '';
       };
-
-    wayland.windowManager.sway = {
-      enable = true;
-      config = rec {
-          modifier = "Mod4";
-      };
-    };
   };
 }
 
