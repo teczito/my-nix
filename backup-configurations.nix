@@ -40,7 +40,7 @@ target_preserve_min    no
 target_preserve        20d 10w *m
 
 volume /mnt/btr_pool
-  target /mnt/btr_pool/backup_ssd
+  target /mnt/backup_ssd
   subvolume nixos-root
   subvolume nixos-home
       '';
