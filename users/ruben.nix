@@ -5,7 +5,7 @@
   users.users.ruben = {
     isNormalUser = true;
     description = "Ruben";
-    extraGroups = [ "docker" "networkmanager" "wheel" "dialout" "adb" ];
+    extraGroups = [ "docker" "nm-openvpn" "networkmanager" "wheel" "dialout" "adb" ];
   };
 
   home-manager.users.ruben = { pkgs, config, ... }: {

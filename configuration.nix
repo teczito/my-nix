@@ -57,6 +57,20 @@
 
   console.useXkbConfig = true;
 
+# /etc/nixos/configuration.nix
+  nixpkgs.overlays = with builtins; [
+
+      (self: super: { awesome = super.awesome.override { gtk3Support = true; }; })
+
+          (
+           import (fetchGit {
+               url = "https://github.com/stefano-m/nix-stefano-m-nix-overlays.git";
+               rev = "0c0342bfb795c7fa70e2b760fb576a5f6f26dfff";
+               })
+          )
+
+  ];
+
   # Enable the X11 windowing system.
   services.xserver = {
     enable = true;
@@ -64,6 +78,9 @@
     displayManager = {
     gdm.enable = true;
     #sddm.enable = true;
+    setupCommands = ''
+        ${pkgs.xorg.xrandr}/bin/xrandr --output eDP-2 --right-of DP-5-1 --output DP-5-1 --right-of DP-5-2
+    '';
     };
 
     desktopManager = {
@@ -89,12 +106,19 @@
     };
 
     windowManager.awesome = {
-      enable = true;
-      luaModules = with pkgs.luaPackages; [
-        luarocks
-        luadbi
+      luaModules = with pkgs; [
+        luaPackages.luarocks
+        luaPackages.luadbi
+        luaPackages.connman_dbus
+        extraLuaPackages.connman_widget
+        extraLuaPackages.dbus_proxy
+        extraLuaPackages.enum
+        extraLuaPackages.media_player
+        extraLuaPackages.power_widget
+        extraLuaPackages.pulseaudio_dbus
+        extraLuaPackages.pulseaudio_widget
+        extraLuaPackages.upower_dbus
       ];
-
     };
   };
 
@@ -178,6 +202,7 @@
     btrbk
   ];
 
+  programs.gnome-terminal.enable = true;
   programs.thunar.enable = true;
   programs.adb.enable = true;
   programs.dconf.enable = true;
