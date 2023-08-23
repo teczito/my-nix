@@ -106,10 +106,11 @@
     };
 
     windowManager.awesome = {
+      enable = true;
       luaModules = with pkgs; [
         luaPackages.luarocks
         luaPackages.luadbi
-        luaPackages.connman_dbus
+       #luaPackages.connman_dbus
         extraLuaPackages.connman_widget
         extraLuaPackages.dbus_proxy
         extraLuaPackages.enum
