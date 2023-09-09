@@ -201,6 +201,7 @@
     brave
     mc
     btrbk
+    audacity
   ];
 
   programs.gnome-terminal.enable = true;
