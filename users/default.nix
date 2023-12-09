@@ -4,7 +4,6 @@
   imports =
     [
       ./ruben.nix
-      ./teczito.nix
     ];
 }
 

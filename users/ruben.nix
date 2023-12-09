@@ -12,6 +12,7 @@
     home.stateVersion = "23.05";  
     home.packages =  with pkgs; [
         eclipses.eclipse-cpp
+        speedcrunch
         htop
     ];
 
@@ -40,6 +41,21 @@
         };
       };
     };
+
+    programs.bash = {
+      enable = true;
+      bashrcExtra = ''
+        source ~/.nix-profile/share/git/contrib/completion/git-prompt.sh
+        if type __git_ps1 &> /dev/null; then
+          export GIT_PS1_SHOWDIRTYSTATE=1
+          export GIT_PS1_SHOWUNTRACKEDFILES=1
+          export GIT_PS1_SHOWCOLORHINTS=1
+          export GIT_PS1_SHOWUPSTREAM=1
+          export PROMPT_DIRTRIM=2
+          export PROMPT_COMMAND=' __git_ps1 "\[\033[1;32m\][\[\e]0;\u@\h: \w\a\]\u@\h:\w]\[\033[0m\]" "\\\$\\[\\033[0m\\] "'
+        fi
+        '';
+      };
   };
 }
 
