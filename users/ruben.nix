@@ -14,6 +14,7 @@
         eclipses.eclipse-cpp
         speedcrunch
         htop
+        vscode
     ];
 
     programs.git = {
