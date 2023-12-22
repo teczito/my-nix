@@ -15,6 +15,7 @@
         speedcrunch
         htop
         vscode
+        rnix-lsp
     ];
 
     programs.git = {
