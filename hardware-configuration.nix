@@ -28,6 +28,7 @@
   fileSystems."/boot" =
     { device = "/dev/disk/by-uuid/C18C-848C";
       fsType = "vfat";
+      options = [ "fmask=0077" "dmask=0077" "defaults" ];
     };
 
   fileSystems."/mnt/backup_ssd" =
