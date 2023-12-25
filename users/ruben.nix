@@ -16,6 +16,7 @@
         htop
         vscode
         rnix-lsp
+        drawio
     ];
 
     programs.git = {
