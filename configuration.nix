@@ -182,6 +182,10 @@
   # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
 
+  nixpkgs.config.permittedInsecurePackages = [
+      "adobe-reader-9.5.5"
+  ];
+
   environment.variables = { EDITOR = "vim"; };
 
   environment.pathsToLink = [ "/libexec" ]; # links /libexec from derivations to /run/current-system/sw 
@@ -202,6 +206,7 @@
     mc
     btrbk
     audacity
+    adobe-reader
   ];
 
   programs.gnome-terminal.enable = true;
