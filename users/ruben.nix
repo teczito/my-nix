@@ -49,6 +49,7 @@
     programs.bash = {
       enable = true;
       bashrcExtra = ''
+        eval "$(direnv hook bash)"
         source ~/.nix-profile/share/git/contrib/completion/git-prompt.sh
         if type __git_ps1 &> /dev/null; then
           export GIT_PS1_SHOWDIRTYSTATE=1

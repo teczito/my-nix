@@ -208,6 +208,7 @@
     btrbk
     audacity
     adobe-reader
+    direnv
   ];
 
   programs.gnome-terminal.enable = true;
