@@ -198,6 +198,7 @@
     vim
     wget
     screen
+    tmux
     minicom
     redshift
     git

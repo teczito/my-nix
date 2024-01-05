@@ -19,6 +19,12 @@
       options = [ "subvol=nixos-root" ];
     };
 
+  fileSystems."/nix" =
+    { device = "/dev/disk/by-uuid/3c2d502a-4144-4b9f-b196-38114e73ab53";
+      fsType = "btrfs";
+      options = [ "subvol=nixos-nix" ];
+    };
+
   fileSystems."/home" =
     { device = "/dev/disk/by-uuid/3c2d502a-4144-4b9f-b196-38114e73ab53";
       fsType = "btrfs";
@@ -32,7 +38,7 @@
     };
 
   fileSystems."/mnt/backup_ssd" =
-    { device = "/dev/disk/by-uuid/f86a0417-2560-452b-9074-84a75739e41e";
+    { device = "/dev/disk/by-uuid/2acc3464-b43c-43dd-b0a1-4b7232d01348";
       fsType = "btrfs";
       options = [ "subvolid=5" "nofail" "x-systemd.automount" "x-systemd.device-timeout=1ms" "x-systemd.idle-timeout=1min" ];
     };
