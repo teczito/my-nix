@@ -209,6 +209,7 @@
     audacity
     adobe-reader
     direnv
+    nixpkgs-fmt
   ];
 
   programs.gnome-terminal.enable = true;

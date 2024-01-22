@@ -60,6 +60,13 @@
           export PROMPT_COMMAND=' __git_ps1 "\[\033[1;32m\][\[\e]0;\u@\h: \w\a\]\u@\h:\w]\[\033[0m\]" "\$IN_NIX_SHELL\\\$\\[\\033[0m\\] "'
         fi
         '';
+      shellAliases = {
+        l = "ls -alh";
+        ll = "ls -l";
+        ls = "ls --color = tty";
+        mb = "cd ~/github.com/current-booster/libmodbus-cpp";
+        cb = "cd ~/github.com/current-booster";
+        };
       };
   };
 }
