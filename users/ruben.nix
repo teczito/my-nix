@@ -61,9 +61,6 @@
         fi
         '';
       shellAliases = {
-        l = "ls -alh";
-        ll = "ls -l";
-        ls = "ls --color = tty";
         mb = "cd ~/github.com/current-booster/libmodbus-cpp";
         cb = "cd ~/github.com/current-booster";
         };
