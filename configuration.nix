@@ -76,20 +76,11 @@
     enable = true;
 
     displayManager = {
-    gdm.enable = true;
-    #sddm.enable = true;
-    setupCommands = ''
-        ${pkgs.xorg.xrandr}/bin/xrandr --output eDP-2 --right-of DP-5-1 --output DP-5-1 --right-of DP-5-2
-    '';
+      gdm.enable = true;
     };
 
     desktopManager = {
       xterm.enable = true;
-      xfce = {
-	      enable =  true;
-	      noDesktop = false; # false = default
-	      enableXfwm = false;
-      };
       gnome = {
         enable = true;
       };
