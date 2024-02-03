@@ -76,7 +76,7 @@
     enable = true;
 
     displayManager = {
-      gdm.enable = true;
+      lightdm.enable = true;
     };
 
     desktopManager = {
