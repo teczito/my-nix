@@ -18,6 +18,7 @@
         rnix-lsp
         drawio
         direnv
+        brave
     ];
 
     programs.git = {

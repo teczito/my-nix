@@ -106,9 +106,9 @@
 
   # Configure keymap in X11
   services.xserver = {
-    layout = "us,se";
-    xkbVariant = "euro";
-    xkbOptions = "grp:ctrls_toggle";
+    xkb.layout = "us,se";
+    xkb.variant = "euro";
+    xkb.options = "grp:ctrls_toggle";
     autoRepeatDelay = 500;
     autoRepeatInterval = 70;
   };
@@ -184,7 +184,6 @@
     redshift
     git
     git-cola
-    brave
     mc
     btrbk
     audacity
