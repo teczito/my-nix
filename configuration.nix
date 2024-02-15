@@ -175,19 +175,14 @@
   # $ nix search wget
   environment.systemPackages = with pkgs; [
     php
-    tdesktop
     vim
     wget
     screen
     tmux
-    minicom
     redshift
     git
-    git-cola
     mc
     btrbk
-    audacity
-    adobe-reader
     direnv
     nixpkgs-fmt
   ];

@@ -11,14 +11,15 @@
   home-manager.users.ruben = { pkgs, config, ... }: {
     home.stateVersion = "23.05";  
     home.packages =  with pkgs; [
-        eclipses.eclipse-cpp
+        vscode
         speedcrunch
         htop
-        vscode
         rnix-lsp
-        drawio
         direnv
         brave
+        minicom
+        git-cola
+        adobe-reader
     ];
 
     programs.git = {
