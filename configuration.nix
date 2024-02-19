@@ -178,6 +178,7 @@
     vim
     wget
     screen
+    brightnessctl
     tmux
     redshift
     git
