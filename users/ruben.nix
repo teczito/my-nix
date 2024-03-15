@@ -14,13 +14,17 @@
         vscode
         speedcrunch
         htop
-        rnix-lsp
         direnv
         brave
         minicom
         git-cola
         adobe-reader
     ];
+
+    programs.vim = {
+      enable = true;
+      extraConfig = import ../config-files/vim/.vimrc;
+    };
 
     programs.git = {
       enable = true;

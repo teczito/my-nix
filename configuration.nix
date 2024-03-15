@@ -175,7 +175,6 @@
   # $ nix search wget
   environment.systemPackages = with pkgs; [
     php
-    vim
     wget
     screen
     brightnessctl
