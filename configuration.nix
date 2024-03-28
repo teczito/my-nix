@@ -136,6 +136,12 @@
   # Enable CUPS to print documents.
   services.printing.enable = true;
   services.printing.stateless = true;
+  services.printing.drivers = [ pkgs.hplip ];
+  services.avahi = {
+    enable = true;
+    nssmdns4 = true;
+    openFirewall = true;
+  };
 
   # st-link usb devices
   services.udev.packages = [ pkgs.stlink ];

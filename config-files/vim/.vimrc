@@ -1,6 +1,8 @@
 ''
 set nocompatible
 set belloff=all
+colorscheme darkblue
+
 "set spell
 filetype plugin on
 " allow backspacing over everything in insert mode
