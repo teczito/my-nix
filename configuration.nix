@@ -135,6 +135,7 @@
 
   # Enable CUPS to print documents.
   services.printing.enable = true;
+  services.printing.stateless = true;
 
   # st-link usb devices
   services.udev.packages = [ pkgs.stlink ];
