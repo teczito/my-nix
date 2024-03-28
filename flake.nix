@@ -5,6 +5,7 @@
   inputs = {
     # normal nix stuff
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    nixd.url = "github:nix-community/nixd";
     # home-manager stuff
     home-manager.url = "github:nix-community/home-manager";
 
@@ -13,9 +14,9 @@
   };
 
   # what will be produced (i.e. the build)
-  outputs = inputs: {
+  outputs = { nixpkgs, nixd, home-manager, ... }: {
     # define a "nixos" build
-    nixosConfigurations.nixos = inputs.nixpkgs.lib.nixosSystem {
+    nixosConfigurations.nixos = nixpkgs.lib.nixosSystem {
       # system to build for
       system = "x86_64-linux";
       # modules to use
@@ -23,7 +24,15 @@
         ./users
         ./apps
         ./configuration.nix # our previous config file
-        inputs.home-manager.nixosModules.home-manager # make home manager available to configuration.nix
+
+        {
+          nixpkgs.overlays = [ nixd.overlays.default ];
+          environment.systemPackages = with nixpkgs;[
+            nixd
+          ];
+        }
+
+        home-manager.nixosModules.home-manager # make home manager available to configuration.nix
         {
           # use system-level nixpkgs rather than the HM private ones
           # "This saves an extra Nixpkgs evaluation, adds consistency, and removes the dependency on NIX_PATH, which is otherwise used for importing Nixpkgs."

@@ -23,8 +23,8 @@
 
     programs.vim = {
       enable = true;
+      extraConfig = import ../config-files/vim/.vimrc;
     };
-    home.file.".vimrc".text = import ../config-files/vim/.vimrc;
 
     programs.git = {
       enable = true;
