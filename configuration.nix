@@ -13,7 +13,7 @@
     ];
 
   nix = {
-    package = pkgs.nixUnstable;
+    package = pkgs.nixVersions.git;
     extraOptions = ''
       experimental-features = nix-command flakes auto-allocate-uids configurable-impure-env
     '';
@@ -131,7 +131,7 @@
     };
   };
 
-  services.xserver.libinput.touchpad.naturalScrolling = true;
+  services.libinput.touchpad.naturalScrolling = true;
 
   # Enable CUPS to print documents.
   services.printing.enable = true;

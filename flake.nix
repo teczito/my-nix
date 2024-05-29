@@ -4,7 +4,7 @@
   # the source of my packages
   inputs = {
     # normal nix stuff
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/master";
     nixd.url = "github:nix-community/nixd";
     # home-manager stuff
     home-manager.url = "github:nix-community/home-manager";
