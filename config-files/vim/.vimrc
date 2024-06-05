@@ -1,7 +1,7 @@
 ''
 set nocompatible
 set belloff=all
-colorscheme darkblue
+colorscheme desert
 
 "set spell
 filetype plugin on
