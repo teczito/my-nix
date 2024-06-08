@@ -15,7 +15,7 @@
   nix = {
     package = pkgs.nixVersions.git;
     extraOptions = ''
-      experimental-features = nix-command flakes auto-allocate-uids configurable-impure-env
+      experimental-features = nix-command flakes auto-allocate-uids fetch-tree configurable-impure-env
     '';
    };
 
@@ -145,6 +145,8 @@
 
   # st-link usb devices
   services.udev.packages = [ pkgs.stlink ];
+
+  services.udev.extraRules = import ./config-files/ti/71-ti-permissions.rules;
 
   # Enable sound with pipewire.
   sound.enable = true;

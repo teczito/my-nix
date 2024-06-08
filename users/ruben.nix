@@ -11,6 +11,7 @@
   home-manager.users.ruben = { pkgs, config, ... }: {
     home.stateVersion = "23.05";  
     home.packages =  with pkgs; [
+        cntr
         vscode
         speedcrunch
         htop
