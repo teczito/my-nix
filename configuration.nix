@@ -207,6 +207,8 @@
   programs.thunar.enable = true;
   programs.adb.enable = true;
   programs.dconf.enable = true;
+  programs.nix-ld.enable = true;
+  programs.nix-ld.libraries = [];
 
   # Some programs need SUID wrappers, can be configured further or are
   # started in user sessions.
