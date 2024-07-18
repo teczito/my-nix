@@ -18,7 +18,7 @@
         direnv
         brave
         minicom
-        git-cola
+        nixos-24-05.git-cola
         adobe-reader
     ];
 
