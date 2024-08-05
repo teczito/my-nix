@@ -199,7 +199,7 @@
     mc
     btrbk
     direnv
-    nixpkgs-fmt
+    nixfmt
   ];
 
   programs.gnome-terminal.enable = true;
