@@ -5,19 +5,18 @@
 { config, pkgs, ... }:
 
 {
-  imports =
-    [ # Include the results of the hardware scan.
-      ./hardware-configuration.nix
-      ./backup-configurations.nix
-      ./timer-configuration.nix
-    ];
+  imports = [ # Include the results of the hardware scan.
+    ./hardware-configuration.nix
+    ./backup-configurations.nix
+    ./timer-configuration.nix
+  ];
 
   nix = {
     package = pkgs.nixVersions.git;
     extraOptions = ''
       experimental-features = nix-command flakes auto-allocate-uids fetch-tree configurable-impure-env
     '';
-   };
+  };
 
   # Bootloader.
   boot.loader.systemd-boot.enable = true;
@@ -57,17 +56,15 @@
 
   console.useXkbConfig = true;
 
-# /etc/nixos/configuration.nix
+  # /etc/nixos/configuration.nix
   nixpkgs.overlays = with builtins; [
 
-      (self: super: { awesome = super.awesome.override { gtk3Support = true; }; })
+    (self: super: { awesome = super.awesome.override { gtk3Support = true; }; })
 
-          (
-           import (fetchGit {
-               url = "https://github.com/stefano-m/nix-stefano-m-nix-overlays.git";
-               rev = "0c0342bfb795c7fa70e2b760fb576a5f6f26dfff";
-               })
-          )
+    (import (fetchGit {
+      url = "https://github.com/stefano-m/nix-stefano-m-nix-overlays.git";
+      rev = "0c0342bfb795c7fa70e2b760fb576a5f6f26dfff";
+    }))
 
   ];
 
@@ -75,23 +72,19 @@
   services.xserver = {
     enable = true;
 
-    displayManager = {
-      lightdm.enable = true;
-    };
+    displayManager = { lightdm.enable = true; };
 
     desktopManager = {
       xterm.enable = true;
-      gnome = {
-        enable = true;
-      };
+      gnome = { enable = true; };
     };
-   
+
     windowManager.awesome = {
       enable = true;
       luaModules = with pkgs; [
         luaPackages.luarocks
         luaPackages.luadbi
-       #luaPackages.connman_dbus
+        #luaPackages.connman_dbus
         extraLuaPackages.connman_widget
         extraLuaPackages.dbus_proxy
         extraLuaPackages.enum
@@ -168,23 +161,17 @@
   virtualisation.docker.enable = true;
   virtualisation.docker.storageDriver = "btrfs";
 
-  nix.settings.trusted-users = [
-    "root"
-    "@wheel"
-  ];
+  nix.settings.trusted-users = [ "root" "@wheel" ];
 
   # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
 
-  nixpkgs.config.permittedInsecurePackages = [
-      "adobe-reader-9.5.5"
-  ];
+  nixpkgs.config.permittedInsecurePackages = [ "adobe-reader-9.5.5" ];
 
-  environment.variables = {
-    EDITOR = "vim";
-  };
+  environment.variables = { EDITOR = "vim"; };
 
-  environment.pathsToLink = [ "/libexec" ]; # links /libexec from derivations to /run/current-system/sw 
+  environment.pathsToLink =
+    [ "/libexec" ]; # links /libexec from derivations to /run/current-system/sw
 
   # List packages installed in system profile. To search, run:
   # $ nix search wget
@@ -207,7 +194,7 @@
   programs.adb.enable = true;
   programs.dconf.enable = true;
   programs.nix-ld.enable = true;
-  programs.nix-ld.libraries = [];
+  programs.nix-ld.libraries = [ ];
 
   # Some programs need SUID wrappers, can be configured further or are
   # started in user sessions.

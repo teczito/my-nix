@@ -28,15 +28,16 @@
         # };
 
       };
-    in
-    {
+    in {
       # define a "nixos" build
       nixosConfigurations.nixos = nixpkgs.lib.nixosSystem {
         inherit system;
         # modules to use
         modules = [
           # Overlays-module makes "pkgs.nixos-24-05" available in modules
-          ({ config, pkgs, ... }: { nixpkgs.overlays = [ overlay-nixos-24-05 ]; })
+          ({ config, pkgs, ... }: {
+            nixpkgs.overlays = [ overlay-nixos-24-05 ];
+          })
 
           ./users
           ./apps
@@ -44,9 +45,7 @@
 
           {
             nixpkgs.overlays = [ nixd.overlays.default ];
-            environment.systemPackages = with nixpkgs;[
-              nixd
-            ];
+            environment.systemPackages = with nixpkgs; [ nixd ];
           }
 
           home-manager.nixosModules.home-manager # make home manager available to configuration.nix

@@ -9,36 +9,20 @@
   };
 
   home-manager.users.teczito = { pkgs, ... }: {
-    home.stateVersion = "23.05";  
-    home.packages =  with pkgs; [
-        htop
-        speedcrunch
-        eclipses.eclipse-cpp
-    ];
+    home.stateVersion = "23.05";
+    home.packages = with pkgs; [ htop speedcrunch eclipses.eclipse-cpp ];
 
     programs.git = {
       enable = true;
       userName = "Ruben de Schipper";
       userEmail = "teczito@gmail.com";
-      aliases = {
-        lg = "log --oneline";
-      };
+      aliases = { lg = "log --oneline"; };
       extraConfig = {
-        core = {
-          editor = "vim";
-        };
-        color = {
-          ui = true;
-        };
-        push = {
-          default = "simple";
-        };
-        pull = {
-          ff = "only";
-        };
-        init = {
-          defaultBranch = "main";
-        };
+        core = { editor = "vim"; };
+        color = { ui = true; };
+        push = { default = "simple"; };
+        pull = { ff = "only"; };
+        init = { defaultBranch = "main"; };
       };
     };
 
@@ -54,10 +38,10 @@
           export PROMPT_DIRTRIM=2
           export PROMPT_COMMAND=' __git_ps1 "\[\033[1;32m\][\[\e]0;\u@\h: \w\a\]\u@\h:\w]\[\033[0m\]" "\\\$\\[\\033[0m\\] "'
         fi
-      
+
         alias portenta='cd /home/teczito/northvolt/portenta/httpd-server/'
-        '';
-      };
+      '';
+    };
   };
 }
 

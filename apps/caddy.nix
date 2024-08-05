@@ -44,5 +44,5 @@ in {
     homeMode = "755";
     group = app;
   };
-  users.groups.${app} = {};
+  users.groups.${app} = { };
 }

@@ -3,11 +3,11 @@
 {
   systemd.timers."backup-to-ssd" = {
     wantedBy = [ "timers.target" ];
-      timerConfig = {
-        OnBootSec = "20m";
-        OnUnitActiveSec = "1h";
-        Unit = "backup-to-ssd.service";
-      };
+    timerConfig = {
+      OnBootSec = "20m";
+      OnUnitActiveSec = "1h";
+      Unit = "backup-to-ssd.service";
+    };
   };
 
   systemd.services."backup-to-ssd" = {
@@ -23,11 +23,11 @@
 
   systemd.timers."snapshots-home" = {
     wantedBy = [ "timers.target" ];
-      timerConfig = {
-        OnBootSec = "5m";
-        OnUnitActiveSec = "1h";
-        Unit = "snapshots-home.service";
-      };
+    timerConfig = {
+      OnBootSec = "5m";
+      OnUnitActiveSec = "1h";
+      Unit = "snapshots-home.service";
+    };
   };
 
   systemd.services."snapshots-home" = {
@@ -43,10 +43,10 @@
 
   systemd.timers."snapshots-root" = {
     wantedBy = [ "timers.target" ];
-      timerConfig = {
-        OnBootSec = "10m";
-        Unit = "snapshots-root.service";
-      };
+    timerConfig = {
+      OnBootSec = "10m";
+      Unit = "snapshots-root.service";
+    };
   };
 
   systemd.services."snapshots-root" = {

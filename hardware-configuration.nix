@@ -4,52 +4,62 @@
 { config, lib, pkgs, modulesPath, ... }:
 
 {
-  imports =
-    [ (modulesPath + "/installer/scan/not-detected.nix")
-    ];
+  imports = [ (modulesPath + "/installer/scan/not-detected.nix") ];
 
-  boot.initrd.availableKernelModules = [ "xhci_pci" "thunderbolt" "nvme" "usbhid" "usb_storage" "sd_mod" "rtsx_pci_sdmmc" ];
+  boot.initrd.availableKernelModules = [
+    "xhci_pci"
+    "thunderbolt"
+    "nvme"
+    "usbhid"
+    "usb_storage"
+    "sd_mod"
+    "rtsx_pci_sdmmc"
+  ];
   boot.initrd.kernelModules = [ ];
   boot.kernelModules = [ "kvm-intel" ];
   boot.extraModulePackages = [ ];
 
-  fileSystems."/" =
-    { device = "/dev/disk/by-uuid/3c2d502a-4144-4b9f-b196-38114e73ab53";
-      fsType = "btrfs";
-      options = [ "subvol=nixos-root" ];
-    };
+  fileSystems."/" = {
+    device = "/dev/disk/by-uuid/3c2d502a-4144-4b9f-b196-38114e73ab53";
+    fsType = "btrfs";
+    options = [ "subvol=nixos-root" ];
+  };
 
-  fileSystems."/nix" =
-    { device = "/dev/disk/by-uuid/3c2d502a-4144-4b9f-b196-38114e73ab53";
-      fsType = "btrfs";
-      options = [ "subvol=nixos-nix" ];
-    };
+  fileSystems."/nix" = {
+    device = "/dev/disk/by-uuid/3c2d502a-4144-4b9f-b196-38114e73ab53";
+    fsType = "btrfs";
+    options = [ "subvol=nixos-nix" ];
+  };
 
-  fileSystems."/home" =
-    { device = "/dev/disk/by-uuid/3c2d502a-4144-4b9f-b196-38114e73ab53";
-      fsType = "btrfs";
-      options = [ "subvol=nixos-home" ];
-    };
+  fileSystems."/home" = {
+    device = "/dev/disk/by-uuid/3c2d502a-4144-4b9f-b196-38114e73ab53";
+    fsType = "btrfs";
+    options = [ "subvol=nixos-home" ];
+  };
 
-  fileSystems."/boot" =
-    { device = "/dev/disk/by-uuid/C18C-848C";
-      fsType = "vfat";
-      options = [ "fmask=0077" "dmask=0077" "defaults" ];
-    };
+  fileSystems."/boot" = {
+    device = "/dev/disk/by-uuid/C18C-848C";
+    fsType = "vfat";
+    options = [ "fmask=0077" "dmask=0077" "defaults" ];
+  };
 
-  fileSystems."/mnt/backup_ssd" =
-    { device = "/dev/disk/by-uuid/2acc3464-b43c-43dd-b0a1-4b7232d01348";
-      fsType = "btrfs";
-      options = [ "subvolid=5" "nofail" "x-systemd.automount" "x-systemd.device-timeout=1ms" "x-systemd.idle-timeout=1min" ];
-    };
+  fileSystems."/mnt/backup_ssd" = {
+    device = "/dev/disk/by-uuid/2acc3464-b43c-43dd-b0a1-4b7232d01348";
+    fsType = "btrfs";
+    options = [
+      "subvolid=5"
+      "nofail"
+      "x-systemd.automount"
+      "x-systemd.device-timeout=1ms"
+      "x-systemd.idle-timeout=1min"
+    ];
+  };
 
-  fileSystems."/mnt/btr_pool" =
-    { device = "/dev/disk/by-uuid/3c2d502a-4144-4b9f-b196-38114e73ab53";
-      fsType = "btrfs";
-      options = [ "subvolid=5" "noatime" ];
-    };
-
-
+  fileSystems."/mnt/btr_pool" = {
+    device = "/dev/disk/by-uuid/3c2d502a-4144-4b9f-b196-38114e73ab53";
+    fsType = "btrfs";
+    options = [ "subvolid=5" "noatime" ];
+  };
 
   swapDevices = [ ];
 
@@ -62,7 +72,8 @@
   # networking.interfaces.wlp0s20f3.useDHCP = lib.mkDefault true;
 
   powerManagement.cpuFreqGovernor = lib.mkDefault "powersave";
-  hardware.cpu.intel.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
+  hardware.cpu.intel.updateMicrocode =
+    lib.mkDefault config.hardware.enableRedistributableFirmware;
 
   hardware.bluetooth.enable = true;
 }

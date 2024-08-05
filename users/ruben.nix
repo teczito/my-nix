@@ -5,21 +5,22 @@
   users.users.ruben = {
     isNormalUser = true;
     description = "Ruben";
-    extraGroups = [ "docker" "nm-openvpn" "networkmanager" "wheel" "dialout" "adb" ];
+    extraGroups =
+      [ "docker" "nm-openvpn" "networkmanager" "wheel" "dialout" "adb" ];
   };
 
   home-manager.users.ruben = { pkgs, config, ... }: {
-    home.stateVersion = "23.05";  
-    home.packages =  with pkgs; [
-        cntr
-        vscode
-        speedcrunch
-        htop
-        direnv
-        brave
-        minicom
-        nixos-24-05.git-cola
-        adobe-reader
+    home.stateVersion = "23.05";
+    home.packages = with pkgs; [
+      cntr
+      vscode
+      speedcrunch
+      htop
+      direnv
+      brave
+      minicom
+      nixos-24-05.git-cola
+      adobe-reader
     ];
 
     programs.vim = {
@@ -31,25 +32,13 @@
       enable = true;
       userName = "Ruben de Schipper";
       userEmail = "rubendeschipper@gmail.com";
-      aliases = {
-        lg = "log --oneline";
-      };
+      aliases = { lg = "log --oneline"; };
       extraConfig = {
-        core = {
-          editor = "vim";
-        };
-        color = {
-          ui = true;
-        };
-        push = {
-          default = "simple";
-        };
-        pull = {
-          ff = "only";
-        };
-        init = {
-          defaultBranch = "main";
-        };
+        core = { editor = "vim"; };
+        color = { ui = true; };
+        push = { default = "simple"; };
+        pull = { ff = "only"; };
+        init = { defaultBranch = "main"; };
       };
     };
 
@@ -66,12 +55,12 @@
           export PROMPT_DIRTRIM=2
           export PROMPT_COMMAND=' __git_ps1 "\[\033[1;32m\][shlvl-''${SHLVL}\[\e]0;@\w: \w\a\]@\w]\[\033[0m\]" "\\\$\\[\\033[0m\\] "'
         fi
-        '';
+      '';
       shellAliases = {
         mb = "cd ~/github.com/current-booster/libmodbus-cpp";
         cb = "cd ~/github.com/cb-lund";
-        };
       };
+    };
   };
 }
 
