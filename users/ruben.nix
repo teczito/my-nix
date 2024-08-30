@@ -55,6 +55,34 @@
           export PROMPT_COMMAND=' __git_ps1 "\[\033[1;32m\][shlvl-''${SHLVL}\[\e]0;@\w: \w\a\]@\w]\[\033[0m\]" "\\\$\\[\\033[0m\\] "'
         fi
 
+        nixify() {
+          if [ ! -e ./.envrc ]; then
+            echo "use nix" > .envrc
+            direnv allow
+          fi
+          if [[ ! -e shell.nix ]] && [[ ! -e default.nix ]]; then
+            cat > default.nix <<'EOF'
+        with import <nixpkgs> {};
+        mkShell {
+          nativeBuildInputs = [
+            bashInteractive
+          ];
+        }
+        EOF
+            ${"EDITOR:-vim"} default.nix
+          fi
+        }
+
+        flakify() {
+          if [ ! -e flake.nix ]; then
+            nix flake new -t github:nix-community/nix-direnv .
+          elif [ ! -e .envrc ]; then
+            echo "use flake" > .envrc
+            direnv allow
+          fi
+          ${"EDITOR:-vim"} flake.nix
+        }
+
         eval "$(direnv hook bash)"
       '';
       shellAliases = {
