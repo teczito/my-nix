@@ -45,7 +45,6 @@
     programs.bash = {
       enable = true;
       bashrcExtra = ''
-        eval "$(direnv hook bash)"
         source ~/.nix-profile/share/git/contrib/completion/git-prompt.sh
         if type __git_ps1 &> /dev/null; then
           export GIT_PS1_SHOWDIRTYSTATE=1
@@ -55,6 +54,8 @@
           export PROMPT_DIRTRIM=2
           export PROMPT_COMMAND=' __git_ps1 "\[\033[1;32m\][shlvl-''${SHLVL}\[\e]0;@\w: \w\a\]@\w]\[\033[0m\]" "\\\$\\[\\033[0m\\] "'
         fi
+
+        eval "$(direnv hook bash)"
       '';
       shellAliases = {
         mb = "cd ~/github.com/current-booster/libmodbus-cpp";
