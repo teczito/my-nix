@@ -76,6 +76,8 @@
         flakify() {
           if [ ! -e flake.nix ]; then
             nix flake new -t github:nix-community/nix-direnv .
+            echo ".direnv/" >> .gitignore
+            echo ".envrc" >> .gitignore
           elif [ ! -e .envrc ]; then
             echo "use flake" > .envrc
             direnv allow
