@@ -69,7 +69,7 @@
           ];
         }
         EOF
-            ${"EDITOR:-vim"} default.nix
+            vim default.nix
           fi
         }
 
@@ -82,7 +82,7 @@
             echo "use flake" > .envrc
             direnv allow
           fi
-          ${"EDITOR:-vim"} flake.nix
+          vim flake.nix
         }
 
         eval "$(direnv hook bash)"
