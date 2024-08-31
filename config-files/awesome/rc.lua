@@ -55,6 +55,7 @@ terminal_screen = "gnome-terminal --hide-menubar --execute bash -c 'screen -RD'"
 terminal_tmux = "gnome-terminal --hide-menubar --execute bash -c 'tmux new-session -A -s main'"
 terminal_mc = "gnome-terminal --hide-menubar --execute bash -c 'mc'"
 internet_browser = "brave"
+screenshot_app = "shutter"
 editor = os.getenv("EDITOR") or "vim"
 editor_cmd = terminal .. " -e " .. editor
 
@@ -332,6 +333,8 @@ globalkeys = gears.table.join(
               end,
               {description = "lua execute prompt", group = "awesome"}),
     -- Custom launchers
+    awful.key({ modkey, "Shift"   }, "s", function () awful.spawn(screenshot_app) end,
+              {description = "lauch screenshot app", group = "launcher"}),
     awful.key({ modkey, "Shift"   }, "Return", function () awful.spawn(terminal_tmux) end,
               {description = "open a tmux session in a terminal", group = "launcher"}),
     awful.key({ modkey,           }, "m", function () awful.spawn(terminal_mc) end,

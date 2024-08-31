@@ -21,6 +21,7 @@
       minicom
       nixos-24-05.git-cola
       adobe-reader
+      shutter
     ];
 
     programs.vim = {
