@@ -166,7 +166,8 @@
   # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
 
-  nixpkgs.config.permittedInsecurePackages = [ "adobe-reader-9.5.5" ];
+  nixpkgs.config.permittedInsecurePackages =
+    [ "nix-2.25.0pre20240807_cfe66dbe" "adobe-reader-9.5.5" ];
 
   environment.variables = { EDITOR = "vim"; };
 
@@ -186,7 +187,7 @@
     mc
     btrbk
     direnv
-    nixfmt
+    nixfmt-rfc-style
   ];
 
   programs.gnome-terminal.enable = true;

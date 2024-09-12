@@ -19,7 +19,8 @@
       direnv
       brave
       minicom
-      nixos-24-05.git-cola
+      git-cola
+      #nixos-24-05.git-cola
       adobe-reader
       shutter
     ];
