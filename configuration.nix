@@ -188,6 +188,7 @@
     btrbk
     direnv
     nixfmt-rfc-style
+    unzip
   ];
 
   programs.gnome-terminal.enable = true;
