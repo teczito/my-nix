@@ -55,7 +55,7 @@ terminal_screen = "gnome-terminal --hide-menubar --execute bash -c 'screen -RD'"
 terminal_tmux = "gnome-terminal --hide-menubar --execute bash -c 'tmux new-session -A -s main'"
 terminal_mc = "gnome-terminal --hide-menubar --execute bash -c 'mc'"
 internet_browser = "brave"
-screenshot_app = "shutter"
+screenshot_app = "shutter -s"
 editor = os.getenv("EDITOR") or "vim"
 editor_cmd = terminal .. " -e " .. editor
 
@@ -341,6 +341,11 @@ globalkeys = gears.table.join(
               {description = "open midnight commander", group = "launcher"}),
     awful.key({ modkey,           }, "i", function () awful.spawn(internet_browser) end,
               {description = "open the internet browser", group = "launcher"}),
+
+    -- Brightness
+    awful.key({ }, "XF86MonBrightnessUp", function () awful.util.spawn("brightnessctl set 5%+") end),
+    awful.key({ }, "XF86MonBrightnessDown", function () awful.util.spawn("brightnessctl set 5%-") end),
+
     -- Menubar
     awful.key({ modkey }, "p", function() menubar.show() end,
               {description = "show the menubar", group = "launcher"})
