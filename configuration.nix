@@ -181,7 +181,6 @@
     wget
     screen
     brightnessctl
-    tmux
     redshift
     git
     mc
