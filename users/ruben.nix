@@ -20,19 +20,19 @@
     {
       home.stateVersion = "23.05";
       home.packages = with pkgs; [
+        adobe-reader
+        bat
+        brave
         cntr
-        vscode
-        speedcrunch
+        direnv
+        git-cola
         htop
         iw
-        direnv
-        brave
         minicom
-        git-cola
-        #nixos-24-05.git-cola
-        adobe-reader
         shutter
+        speedcrunch
         tree
+        vscode
       ];
 
       programs.tmux = {
