@@ -24,6 +24,7 @@
         vscode
         speedcrunch
         htop
+        iw
         direnv
         brave
         minicom
