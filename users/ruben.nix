@@ -29,6 +29,8 @@
         htop
         iw
         minicom
+        nix-index
+        nix-tree
         shutter
         speedcrunch
         tree
