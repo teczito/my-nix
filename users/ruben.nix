@@ -31,7 +31,7 @@
         minicom
         nix-index
         nix-tree
-        shutter
+        nixos-24-11.shutter
         speedcrunch
         tree
         vscode
