@@ -5,22 +5,22 @@
   inputs = {
     # normal nix stuff
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    nixpkgs-nixos-24-05.url = "github:NixOS/nixpkgs/nixos-24.05";
+    nixpkgs-nixos-24-11.url = "github:NixOS/nixpkgs/nixos-24.11";
     nixd.url = "github:nix-community/nixd";
     # home-manager stuff
     home-manager.url = "github:nix-community/home-manager";
 
     # use the version of nixpkgs we specified above rather than the one HM would ordinarily use
-    home-manager.inputs.nixpkgs.follows = "nixpkgs";
+    home-manager.inputs.nixpkgs.follows = "nixpkgs-nixos-24-11";
   };
 
   # what will be produced (i.e. the build)
-  outputs = { nixpkgs, nixpkgs-nixos-24-05, nixd, home-manager, ... }:
+  outputs = { nixpkgs, nixpkgs-nixos-24-11, nixd, home-manager, ... }:
     let
       # system to build for
       system = "x86_64-linux";
-      overlay-nixos-24-05 = final: prev: {
-        nixos-24-05 = nixpkgs-nixos-24-05.legacyPackages.${prev.system};
+      overlay-nixos-24-11 = final: prev: {
+        nixos-24-11 = nixpkgs-nixos-24-11.legacyPackages.${prev.system};
         # use this variant if unfree packages are needed:
         # unstable = import nixpkgs-unstable {
         #   inherit system;
@@ -34,9 +34,9 @@
         inherit system;
         # modules to use
         modules = [
-          # Overlays-module makes "pkgs.nixos-24-05" available in modules
+          # Overlays-module makes "pkgs.nixos-24-11" available in modules
           ({ config, pkgs, ... }: {
-            nixpkgs.overlays = [ overlay-nixos-24-05 ];
+            nixpkgs.overlays = [ overlay-nixos-24-11 ];
           })
 
           ./users
