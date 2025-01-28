@@ -142,9 +142,9 @@
   services.udev.extraRules = import ./config-files/ti/71-ti-permissions.rules;
 
   # Enable sound with pipewire.
-  hardware.pulseaudio.enable = false;
   security.rtkit.enable = true;
   security.polkit.enable = true;
+  services.pulseaudio.enable = false;
   services.pipewire = {
     enable = true;
     alsa.enable = true;
