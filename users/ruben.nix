@@ -142,6 +142,7 @@
           mb = "cd ~/github.com/current-booster/libmodbus-cpp";
           cb = "cd ~/github.com/cb-lund";
           dcdc = "cd ~/github.com/lund-dcdc-kicad";
+          zt600 = "cd ~/github.com/zt600-control";
         };
       };
     };
