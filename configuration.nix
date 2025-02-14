@@ -95,6 +95,19 @@
         extraLuaPackages.upower_dbus
       ];
     };
+
+    xrandrHeads = [
+      {
+        output = "DP-2-1";
+      }
+      {
+        output = "DP-2-2";
+        primary = true;
+      }
+      {
+        output = "eDP-1";
+      }
+    ];
   };
 
   # Configure keymap in X11
