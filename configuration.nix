@@ -200,6 +200,7 @@
     direnv
     nixfmt-rfc-style
     unzip
+    networkmanagerapplet
   ];
 
   programs.gnome-terminal.enable = true;
