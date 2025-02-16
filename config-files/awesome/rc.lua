@@ -28,7 +28,7 @@ if awesome.startup_errors then
 end
 
 -- Startup
-awful.util.spawn("nm-applet")
+awful.spawn.with_shell("nm-applet --indicator")
 
 -- Handle runtime errors after startup
 do
