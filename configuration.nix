@@ -190,17 +190,18 @@
   # List packages installed in system profile. To search, run:
   # $ nix search wget
   environment.systemPackages = with pkgs; [
-    wget
-    screen
     brightnessctl
-    redshift
-    git
-    mc
     btrbk
     direnv
-    nixfmt-rfc-style
-    unzip
+    git
+    mc
     networkmanagerapplet
+    nixfmt-rfc-style
+    redshift
+    screen
+    unzip
+    wget
+    zip
   ];
 
   programs.gnome-terminal.enable = true;
