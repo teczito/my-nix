@@ -15,29 +15,38 @@
   };
 
   # what will be produced (i.e. the build)
-  outputs = { nixpkgs, nixpkgs-nixos-24-11, nixd, home-manager, ... }:
+  outputs =
+    {
+      nixpkgs,
+      nixpkgs-nixos-24-11,
+      nixd,
+      home-manager,
+      ...
+    }:
     let
       # system to build for
       system = "x86_64-linux";
       overlay-nixos-24-11 = final: prev: {
-        nixos-24-11 = nixpkgs-nixos-24-11.legacyPackages.${prev.system};
-        # use this variant if unfree packages are needed:
-        # unstable = import nixpkgs-unstable {
-        #   inherit system;
-        #   config.allowUnfree = true;
-        # };
-
+        nixos-24-11 = import nixpkgs-nixos-24-11 {
+          inherit system;
+          config.allowUnfree = true;
+          config.permittedInsecurePackages = [ "adobe-reader-9.5.5" ];
+        };
       };
-    in {
+    in
+    {
       # define a "nixos" build
       nixosConfigurations.nixos = nixpkgs.lib.nixosSystem {
         inherit system;
         # modules to use
         modules = [
           # Overlays-module makes "pkgs.nixos-24-11" available in modules
-          ({ config, pkgs, ... }: {
-            nixpkgs.overlays = [ overlay-nixos-24-11 ];
-          })
+          (
+            { config, pkgs, ... }:
+            {
+              nixpkgs.overlays = [ overlay-nixos-24-11 ];
+            }
+          )
 
           ./users
           ./apps

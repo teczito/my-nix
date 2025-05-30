@@ -5,7 +5,8 @@
 { config, pkgs, ... }:
 
 {
-  imports = [ # Include the results of the hardware scan.
+  imports = [
+    # Include the results of the hardware scan.
     ./hardware-configuration.nix
     ./backup-configurations.nix
     ./timer-configuration.nix
@@ -69,54 +70,55 @@
   ];
 
   # Enable the X11 windowing system.
-  services.xserver = {
-    enable = true;
-
-    displayManager = { lightdm.enable = true; };
-
-    desktopManager = {
-      xterm.enable = true;
-      gnome = { enable = true; };
-    };
-
-    windowManager.awesome = {
+  services = {
+    xserver = {
       enable = true;
-      luaModules = with pkgs; [
-        luaPackages.luarocks
-        luaPackages.luadbi
-        #luaPackages.connman_dbus
-        extraLuaPackages.connman_widget
-        extraLuaPackages.dbus_proxy
-        extraLuaPackages.enum
-        extraLuaPackages.media_player
-        extraLuaPackages.power_widget
-        extraLuaPackages.pulseaudio_dbus
-        extraLuaPackages.pulseaudio_widget
-        extraLuaPackages.upower_dbus
+      displayManager = {
+        lightdm.enable = true;
+      };
+
+      xkb.layout = "us,se";
+      xkb.variant = "euro";
+      xkb.options = "grp:ctrls_toggle";
+      autoRepeatDelay = 500;
+      autoRepeatInterval = 70;
+
+      windowManager.awesome = {
+        enable = true;
+        luaModules = with pkgs; [
+          luaPackages.luarocks
+          luaPackages.luadbi
+          #luaPackages.connman_dbus
+          extraLuaPackages.connman_widget
+          extraLuaPackages.dbus_proxy
+          extraLuaPackages.enum
+          extraLuaPackages.media_player
+          extraLuaPackages.power_widget
+          extraLuaPackages.pulseaudio_dbus
+          extraLuaPackages.pulseaudio_widget
+          extraLuaPackages.upower_dbus
+        ];
+      };
+
+      xrandrHeads = [
+        {
+          output = "DP-2-1";
+        }
+        {
+          output = "DP-2-2";
+          primary = true;
+        }
+        {
+          output = "eDP-1";
+        }
       ];
+
     };
 
-    xrandrHeads = [
-      {
-        output = "DP-2-1";
-      }
-      {
-        output = "DP-2-2";
-        primary = true;
-      }
-      {
-        output = "eDP-1";
-      }
-    ];
-  };
+    desktopManager.gnome = {
+      enable = true;
+    };
 
-  # Configure keymap in X11
-  services.xserver = {
-    xkb.layout = "us,se";
-    xkb.variant = "euro";
-    xkb.options = "grp:ctrls_toggle";
-    autoRepeatDelay = 500;
-    autoRepeatInterval = 70;
   };
 
   location = {
@@ -142,7 +144,7 @@
   # Enable CUPS to print documents.
   services.printing.enable = true;
   services.printing.stateless = true;
-  services.printing.drivers = [ pkgs.hplip ];
+  services.printing.drivers = [ pkgs.brlaser ];
   services.avahi = {
     enable = true;
     nssmdns4 = true;
@@ -174,18 +176,19 @@
   virtualisation.docker.enable = true;
   virtualisation.docker.storageDriver = "btrfs";
 
-  nix.settings.trusted-users = [ "root" "@wheel" ];
+  nix.settings.trusted-users = [
+    "root"
+    "@wheel"
+  ];
 
   # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
 
-  nixpkgs.config.permittedInsecurePackages =
-    [ "nix-2.25.0pre20240807_cfe66dbe" "adobe-reader-9.5.5" ];
+  environment.variables = {
+    EDITOR = "vim";
+  };
 
-  environment.variables = { EDITOR = "vim"; };
-
-  environment.pathsToLink =
-    [ "/libexec" ]; # links /libexec from derivations to /run/current-system/sw
+  environment.pathsToLink = [ "/libexec" ]; # links /libexec from derivations to /run/current-system/sw
 
   # List packages installed in system profile. To search, run:
   # $ nix search wget

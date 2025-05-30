@@ -20,7 +20,7 @@
     {
       home.stateVersion = "23.05";
       home.packages = with pkgs; [
-        adobe-reader
+        nixos-24-11.adobe-reader
         bat
         brave
         cntr
@@ -31,7 +31,7 @@
         minicom
         nix-index
         nix-tree
-        nixos-24-11.shutter
+        shutter
         speedcrunch
         tree
         vscode
