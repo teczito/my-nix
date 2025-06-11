@@ -91,6 +91,9 @@
 
   hardware.graphics.enable = true;
 
+  hardware.nvidiaOptimus.disable = true;
+  # The previous line disables nvidia, so the next
+  # entry has currently no use.
   hardware.nvidia = {
     # Modesetting is required.
     modesetting.enable = true;

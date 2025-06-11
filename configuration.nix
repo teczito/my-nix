@@ -71,13 +71,17 @@
 
   # Enable the X11 windowing system.
   services = {
+    displayManager = {
+      gdm.enable = true;
+      defaultSession = "none+awesome";
+    };
+
     xserver = {
       enable = true;
-      videoDrivers = [ "nvidia" ];
-      displayManager = {
-        lightdm.enable = true;
-      };
-
+      videoDrivers = [
+        "modesetting"
+        "nvidia"
+      ];
       xkb.layout = "us,se";
       xkb.variant = "euro";
       xkb.options = "grp:ctrls_toggle";
