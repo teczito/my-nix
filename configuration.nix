@@ -202,6 +202,7 @@
     btrbk
     direnv
     git
+    kitty
     mc
     networkmanagerapplet
     nixfmt-rfc-style
@@ -212,6 +213,8 @@
     zip
   ];
 
+  programs.hyprland.enable = true;
+  programs.hyprland.xwayland.enable = true;
   programs.gnome-terminal.enable = true;
   programs.thunar.enable = true;
   programs.adb.enable = true;
