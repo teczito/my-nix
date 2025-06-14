@@ -223,21 +223,35 @@
     redshift
     screen
     unzip
-    waybar
     wget
     wireplumber
+    wofi
     zip
   ];
 
   programs.hyprland.enable = true;
   programs.hyprland.xwayland.enable = true;
   programs.waybar.enable = true;
+
   programs.gnome-terminal.enable = true;
   programs.thunar.enable = true;
   programs.adb.enable = true;
   programs.dconf.enable = true;
   programs.nix-ld.enable = true;
   programs.nix-ld.libraries = [ ];
+
+  fonts.packages = with pkgs; [
+    dina-font
+    fira-code
+    fira-code-symbols
+    font-awesome
+    liberation_ttf
+    mplus-outline-fonts.githubRelease
+    noto-fonts
+    noto-fonts-cjk-sans
+    noto-fonts-emoji
+    proggyfonts
+  ];
 
   # Some programs need SUID wrappers, can be configured further or are
   # started in user sessions.

@@ -7,13 +7,12 @@
     "spacing": 4, // Gaps between modules (4px)
     // Choose the order of the modules
     "modules-left": [
-        "hyperland/workspaces",
-        "hyperland/submap",
-        "hyperland/scratchpad",
+        "hyprland/workspaces",
+        "hyprland/submap",
         "custom/media"
     ],
     "modules-center": [
-        "hyperland/window"
+        "hyprland/window"
     ],
     "modules-right": [
         "mpd",
@@ -26,7 +25,7 @@
         "temperature",
         "backlight",
         "keyboard-state",
-        "hyperland/language",
+        "hyprland/language",
         "battery",
         "battery#bat2",
         "clock",
@@ -34,7 +33,7 @@
         "custom/power"
     ],
     // Modules configuration
-    // "hyperland/workspaces": {
+    // "hyprland/workspaces": {
     //     "disable-scroll": true,
     //     "all-outputs": true,
     //     "warp-on-scroll": false,
@@ -59,10 +58,10 @@
             "unlocked": ""
         }
     },
-    "hyperland/mode": {
+    "hyprland/mode": {
         "format": "<span style=\"italic\">{}</span>"
     },
-    "hyperland/scratchpad": {
+    "hyprland/scratchpad": {
         "format": "{icon} {count}",
         "show-empty": false,
         "format-icons": ["", ""],
@@ -146,9 +145,6 @@
         // "format-full": "",
         "format-icons": ["", "", "", "", ""]
     },
-    "battery#bat2": {
-        "bat": "BAT2"
-    },
     "power-profiles-daemon": {
       "format": "{icon}",
       "tooltip-format": "Power profile: {profile}\nDriver: {driver}",
@@ -188,18 +184,18 @@
         },
         "on-click": "pavucontrol"
     },
-    "custom/media": {
-        "format": "{icon} {text}",
-        "return-type": "json",
-        "max-length": 40,
-        "format-icons": {
-            "spotify": "",
-            "default": "🎜"
-        },
-        "escape": true,
-        "exec": "$HOME/.config/waybar/mediaplayer.py 2> /dev/null" // Script in resources folder
-        // "exec": "$HOME/.config/waybar/mediaplayer.py --player spotify 2> /dev/null" // Filter player based on name
-    },
+//  "custom/media": {
+//      "format": "{icon} {text}",
+//      "return-type": "json",
+//      "max-length": 40,
+//      "format-icons": {
+//          "spotify": "",
+//          "default": "🎜"
+//      },
+//      "escape": true,
+//      "exec": "$HOME/.config/waybar/mediaplayer.py 2> /dev/null" // Script in resources folder
+//      // "exec": "$HOME/.config/waybar/mediaplayer.py --player spotify 2> /dev/null" // Filter player based on name
+//  },
     "custom/power": {
         "format" : "⏻ ",
 		"tooltip": false,
