@@ -223,6 +223,7 @@
     redshift
     screen
     unzip
+    walker
     wget
     wireplumber
     wofi
