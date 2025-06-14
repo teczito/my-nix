@@ -72,7 +72,7 @@
   # Enable the X11 windowing system.
   services = {
     displayManager = {
-      gdm.enable = true;
+      sddm.enable = true;
       defaultSession = "none+awesome";
     };
 
@@ -201,15 +201,18 @@
     brightnessctl
     btrbk
     direnv
+    dunst
     git
     kitty
     mc
     networkmanagerapplet
     nixfmt-rfc-style
+    pipewire
     redshift
     screen
     unzip
     wget
+    wireplumber
     zip
   ];
 

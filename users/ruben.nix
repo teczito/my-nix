@@ -6,12 +6,13 @@
     isNormalUser = true;
     description = "Ruben";
     extraGroups = [
-      "docker"
-      "nm-openvpn"
-      "networkmanager"
-      "wheel"
-      "dialout"
       "adb"
+      "dialout"
+      "docker"
+      "input"
+      "networkmanager"
+      "nm-openvpn"
+      "wheel"
     ];
   };
 
@@ -20,7 +21,6 @@
     {
       home.stateVersion = "23.05";
       home.packages = with pkgs; [
-        nixos-24-11.adobe-reader
         bat
         brave
         cntr
@@ -31,10 +31,12 @@
         minicom
         nix-index
         nix-tree
+        nixos-24-11.adobe-reader
         shutter
         speedcrunch
         tree
         vscode
+        waybar
       ];
 
       programs.tmux = {
