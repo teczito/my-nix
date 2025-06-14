@@ -72,8 +72,8 @@
   # Enable the X11 windowing system.
   services = {
     displayManager = {
-      sddm.enable = true;
-      defaultSession = "none+awesome";
+      enable = true;
+      defaultSession = "hyprland";
     };
 
     xserver = {
@@ -87,6 +87,10 @@
       xkb.options = "grp:ctrls_toggle";
       autoRepeatDelay = 500;
       autoRepeatInterval = 70;
+
+      windowManager.hypr = {
+        enable = true;
+      };
 
       windowManager.awesome = {
         enable = true;
@@ -125,6 +129,13 @@
     };
 
   };
+
+  xdg.portal.enable = true;
+  xdg.portal.wlr.enable = true; # important
+  xdg.portal.extraPortals = with pkgs; [
+    xdg-desktop-portal-gtk
+    xdg-desktop-portal-wlr
+  ];
 
   location = {
     provider = "manual";
@@ -203,6 +214,7 @@
     direnv
     dunst
     git
+    hyprland
     kitty
     mc
     networkmanagerapplet
@@ -211,6 +223,7 @@
     redshift
     screen
     unzip
+    waybar
     wget
     wireplumber
     zip
@@ -218,6 +231,7 @@
 
   programs.hyprland.enable = true;
   programs.hyprland.xwayland.enable = true;
+  programs.waybar.enable = true;
   programs.gnome-terminal.enable = true;
   programs.thunar.enable = true;
   programs.adb.enable = true;

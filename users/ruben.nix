@@ -36,7 +36,6 @@
         speedcrunch
         tree
         vscode
-        waybar
       ];
 
       programs.tmux = {

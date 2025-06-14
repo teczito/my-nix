@@ -12,15 +12,18 @@
 
     # use the version of nixpkgs we specified above rather than the one HM would ordinarily use
     home-manager.inputs.nixpkgs.follows = "nixpkgs-nixos-24-11";
+
+    hyprland.url = "github:hyprwm/Hyprland";
   };
 
   # what will be produced (i.e. the build)
   outputs =
     {
+      home-manager,
+      hyprland,
+      nixd,
       nixpkgs,
       nixpkgs-nixos-24-11,
-      nixd,
-      home-manager,
       ...
     }:
     let
@@ -44,7 +47,9 @@
           (
             { config, pkgs, ... }:
             {
-              nixpkgs.overlays = [ overlay-nixos-24-11 ];
+              nixpkgs.overlays = [
+                overlay-nixos-24-11
+              ];
             }
           )
 
@@ -55,6 +60,11 @@
           {
             nixpkgs.overlays = [ nixd.overlays.default ];
             environment.systemPackages = with nixpkgs; [ nixd ];
+          }
+
+          {
+            nixpkgs.overlays = [ hyprland.overlays.default ];
+            environment.systemPackages = with nixpkgs; [ hyprland ];
           }
 
           home-manager.nixosModules.home-manager # make home manager available to configuration.nix
