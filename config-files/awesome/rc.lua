@@ -261,8 +261,8 @@ globalkeys = gears.table.join(
         end,
         {description = "focus previous by index", group = "client"}
     ),
-    awful.key({ modkey,           }, "w", function () mymainmenu:show() end,
-              {description = "show main menu", group = "awesome"}),
+    -- awful.key({ modkey,           }, "w", function () mymainmenu:show() end,
+    --          {description = "show main menu", group = "awesome"}),
 
     -- Layout manipulation
     awful.key({ modkey, "Shift"   }, "j", function () awful.client.swap.byidx(  1)    end,
@@ -342,7 +342,7 @@ globalkeys = gears.table.join(
               {description = "open a tmux session in a terminal", group = "launcher"}),
     awful.key({ modkey,           }, "m", function () awful.spawn(terminal_mc) end,
               {description = "open midnight commander", group = "launcher"}),
-    awful.key({ modkey,           }, "i", function () awful.spawn(internet_browser) end,
+    awful.key({ modkey,           }, "w", function () awful.spawn(internet_browser) end,
               {description = "open the internet browser", group = "launcher"}),
 
     -- Brightness
@@ -367,8 +367,10 @@ clientkeys = gears.table.join(
               {description = "toggle floating", group = "client"}),
     awful.key({ modkey, "Control" }, "Return", function (c) c:swap(awful.client.getmaster()) end,
               {description = "move to master", group = "client"}),
-    awful.key({ modkey,           }, "o",      function (c) c:move_to_screen()               end,
-              {description = "move to screen", group = "client"}),
+    awful.key({ modkey,           }, "o",      function (c) c:move_to_screen(c.screen.index+1) end,
+              {description = "move to next screen", group = "client"}),
+    awful.key({ modkey,           }, "i",      function (c) c:move_to_screen(c.screen.index-1) end,
+              {description = "move to prev screen", group = "client"}),
     awful.key({ modkey,           }, "t",      function (c) c.ontop = not c.ontop            end,
               {description = "toggle keep on top", group = "client"}),
     awful.key({ modkey, "Control" }, "m",
