@@ -56,6 +56,10 @@
           set-environment -g COLORTERM "truecolor"
           set -g visual-bell on
 
+          # Some custom bindings
+          bind C-a select-window -t:!
+          bind a send-prefix
+
           # easy-to-remember split pane commands
           bind | split-window -h -c "#{pane_current_path}"
           bind - split-window -v -c "#{pane_current_path}"
@@ -68,36 +72,35 @@
         extraConfig = import ../config-files/vim/.vimrc;
       };
 
-      programs.git = {
+      programs.git.settings = {
         enable = true;
         userName = "Ruben de Schipper";
         userEmail = "rubendeschipper@gmail.com";
         aliases = {
           lg = "log --oneline";
         };
-        extraConfig = {
-          core = {
-            editor = "vim";
-          };
-          color = {
-            ui = true;
-          };
-          push = {
-            default = "simple";
-          };
-          pull = {
-            ff = "only";
-          };
-          init = {
-            defaultBranch = "main";
-          };
+        core = {
+          editor = "vim";
+        };
+        color = {
+          ui = true;
+        };
+        push = {
+          default = "simple";
+        };
+        pull = {
+          ff = "only";
+        };
+        init = {
+          defaultBranch = "main";
         };
       };
 
       programs.bash = {
         enable = true;
+
         bashrcExtra = ''
-          source ~/.nix-profile/share/git/contrib/completion/git-prompt.sh
+          source /run/current-system/sw/share/bash-completion/completions/git-prompt.sh
           if type __git_ps1 &> /dev/null; then
             export GIT_PS1_SHOWDIRTYSTATE=1
             export GIT_PS1_SHOWUNTRACKEDFILES=1
@@ -144,6 +147,7 @@
           dcdc = "cd ~/github.com/lund-dcdc-kicad";
           zt600-ctrl = "cd ~/github.com/zt600-control";
           zt600-fw = "cd ~/github.com/zt600-firmware";
+          ltr = "l -ltr";
         };
       };
     };
