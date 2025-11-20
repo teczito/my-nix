@@ -185,6 +185,9 @@
     #media-session.enable = true;
   };
 
+  services.orca.enable = false;
+  services.speechd.enable = false;
+
   virtualisation.docker.enable = true;
   virtualisation.docker.storageDriver = "btrfs";
 
