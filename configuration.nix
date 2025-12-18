@@ -76,6 +76,10 @@
       defaultSession = "none+awesome";
     };
 
+    desktopManager.gnome = {
+      enable = true;
+    };
+
     xserver = {
       enable = true;
       videoDrivers = [
@@ -117,10 +121,6 @@
           output = "eDP-1";
         }
       ];
-
-      desktopManager.gnome = {
-        enable = true;
-      };
 
     };
 
@@ -228,12 +228,13 @@
     zip
   ];
 
-  programs.gnome-terminal.enable = true;
-  programs.thunar.enable = true;
   programs.adb.enable = true;
   programs.dconf.enable = true;
+  programs.gnome-terminal.enable = true;
+  programs.hyprland.enable = true;
   programs.nix-ld.enable = true;
   programs.nix-ld.libraries = [ ];
+  programs.thunar.enable = true;
 
   fonts.packages = with pkgs; [
     dina-font

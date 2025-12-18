@@ -11,7 +11,7 @@
     home-manager.url = "github:nix-community/home-manager";
 
     # use the version of nixpkgs we specified above rather than the one HM would ordinarily use
-    home-manager.inputs.nixpkgs.follows = "nixpkgs-nixos-24-11";
+    home-manager.inputs.nixpkgs.follows = "nixpkgs";
   };
 
   # what will be produced (i.e. the build)
