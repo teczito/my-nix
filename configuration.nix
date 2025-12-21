@@ -213,6 +213,7 @@
     direnv
     dunst
     git
+    hyprland
     kitty
     mc
     networkmanagerapplet
@@ -228,10 +229,13 @@
     zip
   ];
 
+  programs.hyprland.enable = true;
+  programs.hyprland.xwayland.enable = true;
+  programs.waybar.enable = true;
+
   programs.adb.enable = true;
   programs.dconf.enable = true;
   programs.gnome-terminal.enable = true;
-  programs.hyprland.enable = true;
   programs.nix-ld.enable = true;
   programs.nix-ld.libraries = [ ];
   programs.thunar.enable = true;
