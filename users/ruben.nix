@@ -25,6 +25,7 @@
         brave
         cntr
         direnv
+        freecad
         git-cola
         htop
         iw
