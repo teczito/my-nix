@@ -33,7 +33,7 @@
         nix-index
         nix-tree
         nixos-24-11.adobe-reader
-        rustdesk
+        nixos-24-11.rustdesk
         shutter
         speedcrunch
         tree
