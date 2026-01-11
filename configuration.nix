@@ -208,6 +208,7 @@
   # List packages installed in system profile. To search, run:
   # $ nix search wget
   environment.systemPackages = with pkgs; [
+    android-tools
     autorandr
     brightnessctl
     btrbk
@@ -234,7 +235,6 @@
   programs.hyprland.xwayland.enable = true;
   programs.waybar.enable = true;
 
-  programs.adb.enable = true;
   programs.dconf.enable = true;
   programs.gnome-terminal.enable = true;
   programs.nix-ld.enable = true;
