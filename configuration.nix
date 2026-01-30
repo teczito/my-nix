@@ -219,7 +219,7 @@
     kitty
     mc
     networkmanagerapplet
-    nixfmt-rfc-style
+    nixfmt
     pipewire
     redshift
     screen
