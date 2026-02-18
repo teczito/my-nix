@@ -74,6 +74,10 @@
         extraConfig = import ../config-files/vim/.vimrc;
       };
 
+      programs.lazygit = {
+        enable = true;
+      };
+
       programs.git.settings = {
         enable = true;
         userName = "Ruben de Schipper";
