@@ -163,9 +163,11 @@
     openFirewall = true;
   };
 
-  # st-link usb devices
-  services.udev.packages = [ pkgs.stlink ];
-
+  # udev rules
+  services.udev.packages = [
+    pkgs.stlink
+    pkgs.nixos-local.saleae-logic-2
+  ];
   services.udev.extraRules = import ./config-files/ti/71-ti-permissions.rules;
 
   # Enable sound with pipewire.
@@ -222,6 +224,7 @@
     nixfmt
     pipewire
     redshift
+    nixos-local.saleae-logic-2
     screen
     unzip
     walker
