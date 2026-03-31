@@ -86,18 +86,6 @@
         "type": "github"
       }
     },
-    "nixpkgs-local": {
-      "locked": {
-        "lastModified": 1774607803,
-        "narHash": "sha256-CccMUq5cym5DkCtCumBaOoeVz6VqEHVAbYlwSAbBxjw=",
-        "path": "/home/ruben/github.com/nixpkgs",
-        "type": "path"
-      },
-      "original": {
-        "path": "/home/ruben/github.com/nixpkgs",
-        "type": "path"
-      }
-    },
     "nixpkgs-nixos-24-11": {
       "locked": {
         "lastModified": 1751274312,
@@ -135,7 +123,6 @@
         "home-manager": "home-manager",
         "nixd": "nixd",
         "nixpkgs": "nixpkgs_2",
-        "nixpkgs-local": "nixpkgs-local",
         "nixpkgs-nixos-24-11": "nixpkgs-nixos-24-11"
       }
     },

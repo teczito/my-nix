@@ -57,18 +57,6 @@
 
   console.useXkbConfig = true;
 
-  # /etc/nixos/configuration.nix
-  nixpkgs.overlays = with builtins; [
-
-    (self: super: { awesome = super.awesome.override { gtk3Support = true; }; })
-
-    (import (fetchGit {
-      url = "https://github.com/stefano-m/nix-stefano-m-nix-overlays.git";
-      rev = "0c0342bfb795c7fa70e2b760fb576a5f6f26dfff";
-    }))
-
-  ];
-
   # Enable the X11 windowing system.
   services = {
     displayManager = {
@@ -166,7 +154,7 @@
   # udev rules
   services.udev.packages = [
     pkgs.stlink
-    pkgs.nixos-local.saleae-logic-2
+    pkgs.my-saleae-logic-2
   ];
   services.udev.extraRules = import ./config-files/ti/71-ti-permissions.rules;
 
@@ -224,7 +212,7 @@
     nixfmt
     pipewire
     redshift
-    nixos-local.saleae-logic-2
+    my-saleae-logic-2
     screen
     unzip
     walker

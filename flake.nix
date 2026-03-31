@@ -6,7 +6,6 @@
     # normal nix stuff
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     nixpkgs-nixos-24-11.url = "github:NixOS/nixpkgs/nixos-24.11";
-    nixpkgs-local.url = "path:/home/ruben/github.com/nixpkgs";
     nixd.url = "github:nix-community/nixd";
     # home-manager stuff
     home-manager.url = "github:nix-community/home-manager";
@@ -22,9 +21,8 @@
       nixd,
       nixpkgs,
       nixpkgs-nixos-24-11,
-      nixpkgs-local,
       ...
-    }:
+    }@inputs:
     let
       # system to build for
       system = "x86_64-linux";
@@ -35,12 +33,7 @@
           config.permittedInsecurePackages = [ "adobe-reader-9.5.5" ];
         };
       };
-      overlay-nixos-local = final: prev: {
-        nixos-local = import nixpkgs-local {
-          inherit system;
-          config.allowUnfree = true;
-        };
-      };
+      my-overlays = (import ./overlays { inherit inputs; });
     in
     {
       # define a "nixos" build
@@ -54,7 +47,9 @@
             {
               nixpkgs.overlays = [
                 overlay-nixos-24-11
-                overlay-nixos-local
+                my-overlays.additions
+                my-overlays.modifications
+                my-overlays.patch01
               ];
             }
           )
