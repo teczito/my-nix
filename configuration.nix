@@ -188,6 +188,9 @@
 
   # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
+  nixpkgs.config.permittedInsecurePackages = [
+    "xpdf-4.06"
+  ];
 
   environment.variables = {
     EDITOR = "vim";

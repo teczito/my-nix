@@ -5,7 +5,6 @@
   inputs = {
     # normal nix stuff
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    nixpkgs-nixos-24-11.url = "github:NixOS/nixpkgs/nixos-24.11";
     nixd.url = "github:nix-community/nixd";
     # home-manager stuff
     home-manager.url = "github:nix-community/home-manager";
@@ -20,20 +19,11 @@
       home-manager,
       nixd,
       nixpkgs,
-      nixpkgs-nixos-24-11,
       ...
     }@inputs:
     let
       # system to build for
       system = "x86_64-linux";
-      overlay-nixos-24-11 = final: prev: {
-        nixos-24-11 = import nixpkgs-nixos-24-11 {
-          inherit system;
-          config.allowUnfree = true;
-          config.permittedInsecurePackages = [ "adobe-reader-9.5.5" ];
-        };
-      };
-      my-overlays = (import ./overlays { inherit inputs; });
     in
     {
       # define a "nixos" build
@@ -41,16 +31,10 @@
         inherit system;
         # modules to use
         modules = [
-          # Overlays-module makes "pkgs.nixos-24-11" available in modules
           (
             { config, pkgs, ... }:
             {
-              nixpkgs.overlays = [
-                overlay-nixos-24-11
-                my-overlays.additions
-                my-overlays.modifications
-                my-overlays.patch01
-              ];
+              nixpkgs.overlays = import ./overlays { inherit inputs; };
             }
           )
 

@@ -1,7 +1,6 @@
 { config, pkgs, ... }:
 
 {
-
   users.users.ruben = {
     isNormalUser = true;
     description = "Ruben";
@@ -32,12 +31,12 @@
         minicom
         nix-index
         nix-tree
-        nixos-24-11.adobe-reader
         rustdesk
         shutter
         speedcrunch
         tree
         vscode
+        xpdf
       ];
 
       programs.tmux = {
