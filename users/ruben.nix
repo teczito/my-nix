@@ -24,14 +24,14 @@
         brave
         cntr
         direnv
-        freecad
+        # freecad
         git-cola
         htop
         iw
         minicom
         nix-index
         nix-tree
-        rustdesk
+        # rustdesk
         shutter
         speedcrunch
         tree
