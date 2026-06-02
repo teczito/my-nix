@@ -2,7 +2,7 @@
 # your system.  Help is available in the configuration.nix(5) man page
 # and in the NixOS manual (accessible by running ‘nixos-help’).
 
-{ config, pkgs, ... }:
+{ config, pkgs, lib, ... }:
 
 {
   imports = [
@@ -57,6 +57,11 @@
 
   console.useXkbConfig = true;
 
+  # Enable ssh-server (on-demand)
+  # run 'sudo systemctl stop sshd' to start the server
+  services.openssh.enable = true;
+  systemd.services.sshd.wantedBy = lib.mkForce [ ];
+
   # Enable the X11 windowing system.
   services = {
     displayManager = {
@@ -75,7 +80,7 @@
         "nvidia"
       ];
       xkb.layout = "us,se";
-      xkb.variant = "euro";
+      xkb.variant = "euro,";
       xkb.options = "grp:ctrls_toggle";
       autoRepeatDelay = 500;
       autoRepeatInterval = 70;
