@@ -6,10 +6,10 @@
 }:
 let
   pname = "saleae-logic-2";
-  version = "2.4.44";
+  version = "2.4.46";
   src = fetchurl {
     url = "https://downloads2.saleae.com/logic2/Logic-${version}-linux-x64.AppImage";
-    hash = "sha256-lJp0al4tRqXwb6I8iziCav481XNAuEjASo1ZfUWdYLU=";
+    hash = "sha256-goMu0NMWZwHX9PffV6YgtyGiOIPgz+jy6OlaLmcg1vI=";
   };
   desktopItem = makeDesktopItem {
     name = "saleae-logic-2";
@@ -26,17 +26,15 @@ appimageTools.wrapType2 {
 
   extraInstallCommands =
     let
-      appimageContents = appimageTools.extractType2 { inherit pname version src; };
+      appimageContents = appimageTools.extract { inherit pname version src; };
     in
     ''
       mkdir -p $out/etc/udev/rules.d
-      cp ${appimageContents}/resources/linux-x64/99-SaleaeLogic.rules $out/etc/udev/rules.d/
+      cp ${appimageContents}/usr/lib/logic/resources/udev/99-SaleaeLogic.rules $out/etc/udev/rules.d/
       mkdir $out/share
       ln -s ${desktopItem}/share/applications $out/share/
-      for size in 16 32 48 64 128 256; do
-        install -Dm644 -t $out/share/icons/hicolor/"$size"x"$size"/apps \
-          ${appimageContents}/usr/share/icons/hicolor/"$size"x"$size"/apps/Logic.png
-      done
+      install -Dm644 ${appimageContents}/usr/lib/logic/resources/linux-x64/LogicIcon.png \
+        $out/share/pixmaps/Logic.png
     '';
 
   extraPkgs =

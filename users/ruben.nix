@@ -155,5 +155,12 @@
           ltr = "l -ltr";
         };
       };
+
+      # Prevent IBus from autostarting in AwesomeWM (it overrides XKB layout switching).
+      # In GNOME, IBus is started by GNOME's own systemd integration, so this has no effect there.
+      xdg.configFile."autostart/ibus-daemon.desktop".text = ''
+        [Desktop Entry]
+        Hidden=true
+      '';
     };
 }
