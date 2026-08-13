@@ -1,4 +1,6 @@
+.direnv/
+
+.envrc
 nixos.qcow2
 *.swp
 result
-

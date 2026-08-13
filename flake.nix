@@ -24,8 +24,27 @@
     let
       # system to build for
       system = "x86_64-linux";
+
+      # nixpkgs for the dev shell; claude-code is unfree
+      pkgs = import nixpkgs {
+        inherit system;
+        config.allowUnfree = true;
+        overlays = [ nixd.overlays.default ];
+      };
     in
     {
+      # `nix develop` / `nix develop /etc/nixos`
+      devShells.${system}.default = pkgs.mkShell {
+        name = "nixos-config";
+
+        # not `with pkgs;` — that would not shadow the `nixd` flake input above
+        packages = [
+          pkgs.claude-code
+          pkgs.nixd
+          pkgs.nixfmt-rfc-style
+        ];
+      };
+
       # define a "nixos" build
       nixosConfigurations.nixos = nixpkgs.lib.nixosSystem {
         inherit system;
