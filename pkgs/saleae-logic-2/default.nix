@@ -24,6 +24,15 @@ in
 appimageTools.wrapType2 {
   inherit pname version src;
 
+  # The FHS sandbox mounts a tmpfs on /etc and only links in an allowlist of
+  # host entries, so /etc/udev is missing inside it. Logic 2 refuses to start
+  # with "rules directory does not exist, expected /etc/udev/rules.d", so bind
+  # the host directory in (it is a symlink into /etc/static on NixOS, which
+  # bwrap resolves on the host side).
+  extraBwrapArgs = [
+    "--ro-bind-try /etc/udev/rules.d /etc/udev/rules.d"
+  ];
+
   extraInstallCommands =
     let
       appimageContents = appimageTools.extract { inherit pname version src; };
