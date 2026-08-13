@@ -41,7 +41,7 @@
         packages = [
           pkgs.claude-code
           pkgs.nixd
-          pkgs.nixfmt-rfc-style
+          pkgs.nixfmt
         ];
       };
 
