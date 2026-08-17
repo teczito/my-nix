@@ -21,8 +21,18 @@
 
   # Bootloader.
   boot.loader.systemd-boot.enable = true;
+  boot.loader.timeout = 300;
   boot.loader.efi.canTouchEfiVariables = true;
   boot.loader.efi.efiSysMountPoint = "/boot";
+
+  # The 't'/'T' keys in the systemd-boot menu persist a LoaderConfigTimeout EFI
+  # variable, which takes precedence over the timeout written to loader.conf.
+  # Ours was left on "menu-force", i.e. show the menu and never time out, so
+  # boot.loader.timeout above had no effect. Clearing the variable makes
+  # systemd-boot fall back to loader.conf.
+  boot.loader.systemd-boot.extraInstallCommands = ''
+    ${config.systemd.package}/bin/bootctl set-timeout ""
+  '';
 
   # Kernel version
   boot.kernelPackages = pkgs.linuxPackages_latest;
