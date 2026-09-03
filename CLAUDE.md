@@ -92,8 +92,12 @@ is a different thing from what `nvidia-offload` does. Setting them globally make
 fails with BadValue; `nvidia-offload` sets them for one process only.
 
 Because the NVIDIA card now exposes its own DRM node, Hyprland is pinned to the iGPU with
-`env = AQ_DRM_DEVICES,/dev/dri/by-path/pci-0000:00:02.0-card` in `hyprland.conf`. Use the `by-path`
-symlink; `/dev/dri/cardN` numbering is not stable.
+`export AQ_DRM_DEVICES=/dev/dri/by-path/pci-0000:00:02.0-card`. This lives in
+**`config-files/uwsm/env-hyprland`**, *not* as an `env =` line in `hyprland.conf`: the session is started
+by uwsm, which exports its environment before launching the compositor, whereas `hyprland.conf` is not
+read until Hyprland is already up — too late to influence which DRM device aquamarine opens. Use the
+`by-path` symlink; `/dev/dri/cardN` numbering is not stable (the NVIDIA card currently enumerates first,
+as `card1`).
 
 Two standing risks worth knowing: the out-of-tree driver is coupled to `boot.kernelPackages =
 linuxPackages_latest`, so a `nix flake update` can land a kernel NVIDIA has not caught up to and block the
@@ -106,18 +110,30 @@ wired into the build:
 - `config-files/vim/.vimrc` → `programs.vim.extraConfig` in `users/ruben.nix`
 - `config-files/ti/71-ti-permissions.rules` → `services.udev.extraRules` in `configuration.nix`
 
-`config-files/hypr/`, `awesome/`, `waybar/`, `walker/`, and `autorandr/` are **hardlinked** to their
-counterparts under `~/.config/` — same inode, verified with `stat -c %i`. Editing the repo copy in place
-therefore *is* editing the live file; no copy step is needed. The catch is that any tool which replaces a
-file by writing a new inode (atomic rename-based writes) silently **breaks the hardlink**, after which the
-two drift apart. After editing one of these, confirm the link survived:
+`config-files/hypr/`, `awesome/`, `waybar/`, `walker/`, `autorandr/`, and `uwsm/` are the live config.
+Each `~/.config/<name>` is a **directory symlink** pointing at the repo:
 
 ```bash
-stat -c %i config-files/hypr/hyprland.conf ~/.config/hypr/hyprland.conf   # must match
+ls -ld ~/.config/hypr    # ~/.config/hypr -> /etc/nixos/config-files/hypr
 ```
 
-If it broke, `cp` the repo copy over the live path and re-link. `config-files/mc/mc.keymap` has no live
-counterpart at all. A rebuild never deploys any of these.
+So editing the repo copy *is* editing the live file, and there is no copy step and no link to break — a
+rename-based write creates a new inode inside the symlinked directory, which the symlink still resolves
+to. Any editor or tool is safe. To wire up a new one, `ln -s /etc/nixos/config-files/<name>
+~/.config/<name>`.
+
+> Earlier revisions of this file claimed these were **hardlinks** checked with `stat -c %i`, and warned
+> that atomic writes silently break them. That was wrong on both counts. Hardlinks between the two paths
+> are in fact impossible: `/` is btrfs subvolume `nixos-root` (subvolid 357) and `/home` is `nixos-home`
+> (subvolid 375), so `ln` across them fails with `Invalid cross-device link`. The `stat -c %i` check did
+> pass, which is why the error survived — but only because the symlink resolves to the same file. Do not
+> reintroduce inode-preserving contortions such as `cat new > repo/file` to "protect the link"; that
+> redirect truncates the target before the source is read, and destroys the file if the source is missing.
+
+`config-files/mc/` is an ordinary directory, not linked — `~/.config/mc/` exists separately and holds only
+`ini`/`panels.ini`, so `config-files/mc/mc.keymap` has no live counterpart at all. `config-files/vim/` and
+`config-files/ti/` have no `~/.config` counterpart by design; they are the two wired into the build above.
+A rebuild never deploys any of these.
 
 **Three desktop sessions coexist and diverge.** GNOME and awesome run on X11 (`defaultSession` is
 `none+awesome`), Hyprland runs on Wayland. Session-specific environment variables set in
@@ -125,3 +141,28 @@ counterpart at all. A rebuild never deploys any of these.
 line there produces symptoms that appear only under Hyprland and not under awesome.
 
 Hyprland env changes need a full logout/login; `hyprctl reload` does not re-export them.
+
+**Hyprland is started by uwsm, and this is not optional.** Hyprland ≥ 0.56 ships a `start-hyprland`
+launcher which is the `Exec` of `hyprland.desktop` and which unconditionally execs into uwsm. uwsm needs
+its own systemd *user* units (`wayland-session-bindpid@`, `wayland-wm@`, `wayland-wm-env@`, …), and those
+only exist because `programs.hyprland.withUWSM = true` pulls in the uwsm module, which adds the package to
+`systemd.packages`. Without it the session dies straight back to the greeter, with the compositor never
+exec'd at all:
+
+```
+systemctl[…]: Failed to start wayland-session-bindpid@<pid>.service: Unit … not found.
+uwsm[<pid>]: Command '['systemctl','--user','start','wayland-session-bindpid@<pid>.service']'
+             returned non-zero exit status 5.
+```
+
+Both session entries the hyprland package registers (`hyprland.desktop` and `hyprland-uwsm.desktop`) route
+through uwsm, so there is no non-uwsm entry to fall back to. When diagnosing this, note that
+`start-hyprland` execs uwsm in place, so the PID keeps its identity and shows up in the journal as
+`python3.x` — and a genuine Hyprland failure would instead leave log lines under
+`/run/user/1000/hypr/<instance>/`; if that directory does not exist, the compositor never ran.
+
+Environment for the session belongs in `config-files/uwsm/env` (all compositors) or
+`config-files/uwsm/env-hyprland` (Hyprland only, matched by lowercased `XDG_CURRENT_DESKTOP`). These are
+sourced as POSIX shell — variables need `export`, unlike the `env = K,V` syntax of `hyprland.conf` — and
+they are applied *before* the compositor starts, which is why anything affecting device or backend
+selection has to go there rather than in `hyprland.conf`.

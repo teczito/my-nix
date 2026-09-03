@@ -1,0 +1,17 @@
+# Sourced by uwsm (as POSIX shell) while preparing the environment for the
+# Hyprland session, before the compositor is launched. uwsm picks this file up
+# because XDG_CURRENT_DESKTOP is "Hyprland" -> "env-hyprland".
+#
+# ~/.config/uwsm is a symlink to this directory, like the other
+# directories under config-files/. A rebuild does not deploy this file.
+
+# Pin the compositor to the Intel iGPU. The NVIDIA card (nvidia-prime.nix) now
+# loads a driver and exposes its own DRM node, so aquamarine has more than one
+# card to choose from and does not necessarily pick the one holding the
+# displays. The by-path symlink is stable across boots; /dev/dri/cardN is not
+# (on this machine the NVIDIA card currently enumerates first, as card1).
+#
+# This has to live here rather than as an `env =` line in hyprland.conf: under
+# uwsm the compositor's own config is not read until Hyprland is already up,
+# which is too late to influence device selection.
+export AQ_DRM_DEVICES=/dev/dri/by-path/pci-0000:00:02.0-card

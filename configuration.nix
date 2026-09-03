@@ -251,6 +251,17 @@
 
   programs.hyprland.enable = true;
   programs.hyprland.xwayland.enable = true;
+  # Required, not optional. Hyprland >= 0.56 ships `start-hyprland`, which is
+  # the Exec of the hyprland.desktop session entry and which unconditionally
+  # execs into uwsm. uwsm then needs its own systemd user units
+  # (wayland-session-bindpid@, wayland-wm@, ...) to exist; this option is what
+  # pulls the uwsm module in and puts them in systemd.packages. Without it uwsm
+  # aborts with "Unit wayland-session-bindpid@<pid>.service not found" and the
+  # compositor is never exec'd at all -- the session dies straight back to the
+  # greeter. Both session entries the hyprland package registers
+  # (hyprland.desktop and hyprland-uwsm.desktop) route through uwsm, so there is
+  # no non-uwsm path to fall back to.
+  programs.hyprland.withUWSM = true;
   programs.waybar.enable = true;
 
   programs.dconf.enable = true;
