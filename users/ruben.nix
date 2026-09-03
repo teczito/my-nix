@@ -148,6 +148,12 @@
           eval "$(direnv hook bash)"
         '';
         shellAliases = {
+          # KiCad upstream does not support the GTK Wayland backend. Under Hyprland
+          # it lands on wx's EGL/wl_egl canvas path, where zoom/pan stutters and
+          # cursor warping (Preferences > Common > "Center and warp cursor on zoom")
+          # silently no-ops. Pin it to XWayland/GLX, which is what awesome uses.
+          # Harmless under awesome, where the GTK backend is x11 already.
+          kicad = "GDK_BACKEND=x11 kicad";
           mb = "cd ~/github.com/current-booster/libmodbus-cpp";
           dcdc = "cd ~/github.com/lund-dcdc-kicad";
           zt600-ctrl = "cd ~/github.com/zt600-control";
