@@ -92,12 +92,45 @@ is a different thing from what `nvidia-offload` does. Setting them globally make
 fails with BadValue; `nvidia-offload` sets them for one process only.
 
 Because the NVIDIA card now exposes its own DRM node, Hyprland is pinned to the iGPU with
-`export AQ_DRM_DEVICES=/dev/dri/by-path/pci-0000:00:02.0-card`. This lives in
-**`config-files/uwsm/env-hyprland`**, *not* as an `env =` line in `hyprland.conf`: the session is started
-by uwsm, which exports its environment before launching the compositor, whereas `hyprland.conf` is not
-read until Hyprland is already up — too late to influence which DRM device aquamarine opens. Use the
-`by-path` symlink; `/dev/dri/cardN` numbering is not stable (the NVIDIA card currently enumerates first,
-as `card1`).
+`export AQ_DRM_DEVICES=/dev/dri/igpu`. This lives in **`config-files/uwsm/env-hyprland`**, *not* as an
+`env =` line in `hyprland.conf`: the session is started by uwsm, which exports its environment before
+launching the compositor, whereas `hyprland.conf` is not read until Hyprland is already up — too late to
+influence which DRM device aquamarine opens.
+
+**`AQ_DRM_DEVICES` is a colon-separated list, like `PATH`.** This rules out the `by-path` name that looks
+like the obvious stable choice: `/dev/dri/by-path/pci-0000:00:02.0-card` contains two colons of its own,
+so aquamarine splits it into three nonexistent paths and logs
+
+```
+drm: Failed to canonicalize path /dev/dri/by-path/pci-0000
+drm: Failed to canonicalize path 00
+drm: Failed to canonicalize path 02.0-card
+drm: Found no gpus to use, cannot continue
+```
+
+then dies with `CBackend::create() failed!` — a *session* failure that looks identical to the uwsm one
+above from the greeter, but is not: here the compositor really did run, so
+`/run/user/1000/hypr/<instance>/` and a crash report under `~/.cache/hyprland/` both exist. Note the DRM
+backend failure is not the last line; aquamarine falls through to the Wayland backend, which fails with
+its own misleading `wl_display_connect failed (is a wayland compositor running?)`. Read past it to
+`Cannot open backend: no allocator available`, and further up to the canonicalize errors, which name the
+real cause.
+
+`/dev/dri/cardN` parses fine but the numbering is not stable across boots, so **`/dev/dri/igpu` is a udev
+symlink defined in `nvidia-prime.nix`**, matched on the iGPU's PCI slot rather than on a card number:
+
+```
+KERNEL=="card*", SUBSYSTEM=="drm", DEVPATH=="*/0000:00:02.0/drm/card*", SYMLINK+="dri/igpu"
+```
+
+That is a second definition of `services.udev.extraRules` alongside the TI rules in `configuration.nix`;
+the option is `types.lines`, so the two merge rather than collide. Current enumeration, for reference —
+**NVIDIA is `card0`, the iGPU is `card1`** (all four displays hang off `card1`), the opposite of what
+earlier revisions of this file claimed:
+
+```bash
+for c in /sys/class/drm/card[0-9]; do echo "$c -> $(basename $(readlink -f $c/device/driver))"; done
+```
 
 Two standing risks worth knowing: the out-of-tree driver is coupled to `boot.kernelPackages =
 linuxPackages_latest`, so a `nix flake update` can land a kernel NVIDIA has not caught up to and block the

@@ -41,4 +41,26 @@
       nvidiaBusId = "PCI:1:0:0";
     };
   };
+
+  # A colon-free stable alias for the iGPU's DRM node, consumed by
+  # AQ_DRM_DEVICES in config-files/uwsm/env-hyprland to pin Hyprland to the
+  # Intel card.
+  #
+  # This exists because AQ_DRM_DEVICES is a *colon-separated list*, like PATH.
+  # The obvious stable name, /dev/dri/by-path/pci-0000:00:02.0-card, carries
+  # two colons of its own, so aquamarine splits it into three nonexistent
+  # paths ("/dev/dri/by-path/pci-0000", "00", "02.0-card"), finds no usable
+  # GPU, and aborts the session with "CBackend::create() failed!".
+  # Plain /dev/dri/cardN would parse, but the numbering is not stable across
+  # boots -- the NVIDIA card currently takes card0 and the iGPU card1.
+  #
+  # Matching on the PCI slot (0000:00:02.0, the same device as intelBusId
+  # above) rather than on a card number keeps this pinned to the iGPU however
+  # the DRM nodes happen to enumerate.
+  #
+  # services.udev.extraRules is a `lines` option, so this definition merges
+  # with the one in configuration.nix rather than colliding with it.
+  services.udev.extraRules = ''
+    KERNEL=="card*", SUBSYSTEM=="drm", DEVPATH=="*/0000:00:02.0/drm/card*", SYMLINK+="dri/igpu"
+  '';
 }
