@@ -5,8 +5,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## What this is
 
 The live NixOS system configuration for a single machine (`/etc/nixos`, hostname `nixos`, x86_64-linux,
-Tiger Lake laptop with the discrete NVIDIA GPU disabled). Edits here change the machine the agent is
-running on. There is no test suite; correctness is checked by evaluating and building the configuration.
+HP ZBook Fury 15.6" G8 / Xeon W-11955M, Intel iGPU + discrete NVIDIA RTX A2000 on PRIME offload). Edits
+here change the machine the agent is running on. There is no test suite; correctness is checked by
+evaluating and building the configuration.
 
 ## Commands
 
@@ -61,15 +62,43 @@ btrbk against those exact paths. Renaming a config file there breaks the units h
 ## Gotchas
 
 **`hardware-configuration.nix` is hand-edited despite its "Do not modify this file!" banner.** It carries
-the NVIDIA block, `hardware.bluetooth.enable`, `hardware.graphics.enable`, and the extra btrfs mounts.
-Never regenerate it with `nixos-generate-config`; that would silently drop all of it.
+the GPU/graphics settings, `hardware.bluetooth.enable`, and the extra btrfs mounts. Never regenerate it
+with `nixos-generate-config`; that would silently drop all of it.
 
-**The NVIDIA GPU is fully disabled.** `hardware.nvidiaOptimus.disable = true` blacklists `nvidia`,
-`nvidia-drm`, `nvidia-modeset`, and `nvidia-uvm` at the modprobe level, so only the Intel iGPU exists at
-runtime (`/dev/dri/card1`) — even though `services.xserver.videoDrivers` still lists `"nvidia"` and the
-whole `hardware.nvidia` block (PRIME offload, `open = true`) is still present and inert. Do not set
-`__GLX_VENDOR_LIBRARY_NAME`, `LIBVA_DRIVER_NAME`, or similar to `nvidia` anywhere; forcing the NVIDIA
-GLX vendor makes `glXCreateNewContext` fail with BadValue for every GLX client on the machine.
+**Both GPUs are live, as PRIME render offload.** All graphics config is in `nvidia-prime.nix`; the
+`hardware.nvidiaOptimus.disable` + `bbswitch` setup that used to power the card off is **gone**.
+
+- iGPU `8086:9a70`, Tiger Lake-H **GT1 / 32 EU UHD Graphics** at `PCI:0:2:0`. It owns every display
+  (3× 2560×1440 external + 1920×1080 eDP) and does all compositing. This is the weakest TGL graphics
+  tier — not the 96-EU Iris Xe of the U-series — which is why offloading real 3D work matters here.
+- dGPU `10de:25b8`, **NVIDIA RTX A2000 Mobile (GA107GLM, Ampere, 4 GB)** at `PCI:1:0:0`. Idles at
+  D3cold via `powerManagement.finegrained` (`NVreg_DynamicPowerManagement=0x02`) and wakes on demand.
+
+Run something on the NVIDIA card with the **`nvidia-offload` wrapper** (`prime.offload.enableOffloadCmd`),
+e.g. `nvidia-offload blender`. That is the only supported path.
+
+`services.xserver.videoDrivers` must list **`"nvidia"` only**. The PRIME module injects its own
+`modesetting` driver entry carrying `BusID "PCI:0:2:0"` (`nixos/modules/hardware/video/nvidia.nix`,
+`services.xserver.drivers`); adding `"modesetting"` by hand emits a *second*, BusID-less
+`Device-modesetting[0]`/`Screen-modesetting[0]` pair into the generated `xorg.conf`.
+
+`hardware.nvidia.open` must be set **explicitly** to `true`. It defaults to `null` on driver ≥ 560 and
+`null` fails an assertion. Ampere is fully supported by the open kernel modules.
+
+Still do **not** set `__GLX_VENDOR_LIBRARY_NAME`, `LIBVA_DRIVER_NAME`, or similar to `nvidia` session-wide
+(in `hyprland.conf`, `environment.variables`, …) — that remains true now that the driver is installed, and
+is a different thing from what `nvidia-offload` does. Setting them globally makes libglvnd hand
+`libGLX_nvidia.so` to every GLX client including those on the Intel screen, where `glXCreateNewContext`
+fails with BadValue; `nvidia-offload` sets them for one process only.
+
+Because the NVIDIA card now exposes its own DRM node, Hyprland is pinned to the iGPU with
+`env = AQ_DRM_DEVICES,/dev/dri/by-path/pci-0000:00:02.0-card` in `hyprland.conf`. Use the `by-path`
+symlink; `/dev/dri/cardN` numbering is not stable.
+
+Two standing risks worth knowing: the out-of-tree driver is coupled to `boot.kernelPackages =
+linuxPackages_latest`, so a `nix flake update` can land a kernel NVIDIA has not caught up to and block the
+rebuild (595.99.02 builds against 7.2.2 — verified); and `finegrained` runtime-D3 idles a little hotter
+than the old ACPI cut, roughly 1–2 W.
 
 **Most files in `config-files/` are unmanaged copies, not the deployed config.** Only two are actually
 wired into the build:
@@ -77,9 +106,18 @@ wired into the build:
 - `config-files/vim/.vimrc` → `programs.vim.extraConfig` in `users/ruben.nix`
 - `config-files/ti/71-ti-permissions.rules` → `services.udev.extraRules` in `configuration.nix`
 
-`config-files/hypr/`, `awesome/`, `waybar/`, `walker/`, `mc/`, and `autorandr/` are hand-kept mirrors of
-files under `~/.config/`. Nothing symlinks or copies them. When changing one of these, write **both** the
-repo copy and the live `~/.config/` file, and verify with `diff` — a rebuild will not deploy them.
+`config-files/hypr/`, `awesome/`, `waybar/`, `walker/`, and `autorandr/` are **hardlinked** to their
+counterparts under `~/.config/` — same inode, verified with `stat -c %i`. Editing the repo copy in place
+therefore *is* editing the live file; no copy step is needed. The catch is that any tool which replaces a
+file by writing a new inode (atomic rename-based writes) silently **breaks the hardlink**, after which the
+two drift apart. After editing one of these, confirm the link survived:
+
+```bash
+stat -c %i config-files/hypr/hyprland.conf ~/.config/hypr/hyprland.conf   # must match
+```
+
+If it broke, `cp` the repo copy over the live path and re-link. `config-files/mc/mc.keymap` has no live
+counterpart at all. A rebuild never deploys any of these.
 
 **Three desktop sessions coexist and diverge.** GNOME and awesome run on X11 (`defaultSession` is
 `none+awesome`), Hyprland runs on Wayland. Session-specific environment variables set in

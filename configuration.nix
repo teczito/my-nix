@@ -2,7 +2,12 @@
 # your system.  Help is available in the configuration.nix(5) man page
 # and in the NixOS manual (accessible by running ‘nixos-help’).
 
-{ config, pkgs, lib, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 
 {
   imports = [
@@ -10,6 +15,7 @@
     ./hardware-configuration.nix
     ./backup-configurations.nix
     ./timer-configuration.nix
+    ./nvidia-prime.nix
   ];
 
   nix = {
@@ -85,8 +91,11 @@
 
     xserver = {
       enable = true;
+      # Only "nvidia" belongs here. The PRIME module in ./nvidia-prime.nix adds
+      # its own "modesetting" entry carrying `BusID "PCI:0:2:0"`; listing
+      # "modesetting" here as well emits a second, BusID-less
+      # Device-modesetting[0]/Screen-modesetting[0] pair into xorg.conf.
       videoDrivers = [
-        "modesetting"
         "nvidia"
       ];
       xkb.layout = "us,se";
