@@ -68,7 +68,7 @@
   console.useXkbConfig = true;
 
   # Enable ssh-server (on-demand)
-  # run 'sudo systemctl stop sshd' to start the server
+  # run 'sudo systemctl start sshd' to start the server
   services.openssh.enable = true;
   systemd.services.sshd.wantedBy = lib.mkForce [ ];
 
