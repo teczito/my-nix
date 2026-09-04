@@ -53,10 +53,6 @@ beautiful.init(gears.filesystem.get_themes_dir() .. "default/theme.lua")
 local power = require("power_widget")
 
 -- This is used later as the default terminal and editor to run.
--- terminal = "gnome-terminal"
--- terminal_screen = "gnome-terminal --hide-menubar --execute bash -c 'screen -RD'"
--- terminal_tmux = "gnome-terminal --hide-menubar --execute bash -c 'tmux new-session -A -s main'"
--- terminal_mc = "gnome-terminal --hide-menubar --execute bash -c 'mc'"
 terminal = "kitty"
 terminal_tmux = "kitty bash -c 'tmux new-session -A -s main'"
 terminal_mc = "kitty bash -c 'mc'"

@@ -143,8 +143,8 @@ wired into the build:
 - `config-files/vim/.vimrc` → `programs.vim.extraConfig` in `users/ruben.nix`
 - `config-files/ti/71-ti-permissions.rules` → `services.udev.extraRules` in `configuration.nix`
 
-`config-files/hypr/`, `awesome/`, `waybar/`, `walker/`, `autorandr/`, and `uwsm/` are the live config.
-Each `~/.config/<name>` is a **directory symlink** pointing at the repo:
+`config-files/hypr/`, `awesome/`, `waybar/`, `walker/`, `autorandr/`, `kitty/`, and `uwsm/` are the live
+config. Each `~/.config/<name>` is a **directory symlink** pointing at the repo:
 
 ```bash
 ls -ld ~/.config/hypr    # ~/.config/hypr -> /etc/nixos/config-files/hypr

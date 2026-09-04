@@ -319,7 +319,6 @@
   programs.waybar.enable = true;
 
   programs.dconf.enable = true;
-  programs.gnome-terminal.enable = true;
   programs.nix-ld.enable = true;
   programs.nix-ld.libraries = [ ];
   programs.thunar.enable = true;
