@@ -1,0 +1,231 @@
+/* walker 2.x theme for this machine.
+ *
+ * This is upstream's resources/themes/default/style.css with three colours
+ * swapped for the ones the old walker 0.13 theme used, plus one alpha bump.
+ * It has to be a *complete* stylesheet, not an override file: when a theme
+ * directory contains style.css, walker loads it with load_from_file() and
+ * returns, so the embedded default is never applied on top (src/theme/mod.rs,
+ * setup_css). Re-derive it after a walker update with:
+ *
+ *   nix build .#nixosConfigurations.nixos.pkgs.walker.src
+ *   diff result/resources/themes/default/style.css \
+ *        /etc/nixos/config-files/walker/themes/nixos/style.css
+ *
+ * Changed from upstream:
+ *   accent_bg_color  #54546d -> #008170   (old theme's hsl(172, 100%, 25.3%))
+ *   theme_fg_color   #f2ecbc -> rgba(255, 255, 255, 0.8)  (old `foreground`)
+ *   selected item background alpha 0.25 -> 0.4  (old theme used 0.4)
+ *
+ * window_bg_color needed no change: the old theme's
+ * hsla(240, 12.7%, 13.9%, 0.98) is #1f1f28, which is already upstream's value.
+ */
+
+@define-color window_bg_color #1f1f28;
+@define-color accent_bg_color #008170;
+@define-color theme_fg_color rgba(255, 255, 255, 0.8);
+@define-color error_bg_color #C34043;
+@define-color error_fg_color #DCD7BA;
+
+* {
+  all: unset;
+}
+
+popover {
+  background: lighter(@window_bg_color);
+  border: 1px solid darker(@accent_bg_color);
+  border-radius: 18px;
+  padding: 10px;
+}
+
+.normal-icons {
+  -gtk-icon-size: 16px;
+}
+
+.large-icons {
+  -gtk-icon-size: 32px;
+}
+
+scrollbar {
+  opacity: 0;
+}
+
+.box-wrapper {
+  box-shadow:
+    0 19px 38px rgba(0, 0, 0, 0.3),
+    0 15px 12px rgba(0, 0, 0, 0.22);
+  background: @window_bg_color;
+  padding: 20px;
+  border-radius: 20px;
+  border: 1px solid darker(@accent_bg_color);
+}
+
+.preview-box,
+.elephant-hint,
+.placeholder {
+  color: @theme_fg_color;
+}
+
+.box {
+}
+
+.search-container {
+  border-radius: 10px;
+}
+
+.input placeholder {
+  opacity: 0.5;
+}
+
+.input selection {
+  background: lighter(lighter(lighter(@window_bg_color)));
+}
+
+.input {
+  caret-color: @theme_fg_color;
+  background: lighter(@window_bg_color);
+  padding: 10px;
+  color: @theme_fg_color;
+}
+
+.input:focus,
+.input:active {
+}
+
+.content-container {
+}
+
+.placeholder {
+}
+
+.scroll {
+}
+
+.list {
+  color: @theme_fg_color;
+}
+
+child {
+}
+
+.item-box {
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.item-quick-activation {
+  background: alpha(@accent_bg_color, 0.25);
+  border-radius: 5px;
+  padding: 10px;
+}
+
+/* child:hover .item-box, */
+child:selected .item-box,
+row:selected .item-box {
+  background: alpha(@accent_bg_color, 0.4);
+}
+
+.item-text-box {
+}
+
+.item-subtext {
+  font-size: 12px;
+  opacity: 0.5;
+}
+
+.providerlist .item-subtext {
+  font-size: unset;
+  opacity: 0.75;
+}
+
+.item-image-text {
+  font-size: 28px;
+}
+
+.preview {
+  border: 1px solid alpha(@accent_bg_color, 0.25);
+  /* padding: 10px; */
+  border-radius: 10px;
+  color: @theme_fg_color;
+}
+
+.calc .item-text {
+  font-size: 24px;
+}
+
+.calc .item-subtext {
+}
+
+.symbols .item-image {
+  font-size: 24px;
+}
+
+.todo.done .item-text-box {
+  opacity: 0.25;
+}
+
+.todo.urgent {
+  font-size: 24px;
+}
+
+.todo.active {
+  font-weight: bold;
+}
+
+.bluetooth.disconnected {
+  opacity: 0.5;
+}
+
+.preview .large-icons {
+  -gtk-icon-size: 64px;
+}
+
+.keybinds {
+  padding-top: 10px;
+  border-top: 1px solid lighter(@window_bg_color);
+  font-size: 12px;
+  color: @theme_fg_color;
+}
+
+.global-keybinds {
+}
+
+.item-keybinds {
+}
+
+.keybind {
+}
+
+.keybind-button {
+  opacity: 0.5;
+}
+
+.keybind-button:hover {
+  opacity: 0.75;
+}
+
+.keybind-bind {
+  text-transform: lowercase;
+  opacity: 0.35;
+}
+
+.keybind-label {
+  padding: 2px 4px;
+  border-radius: 4px;
+  border: 1px solid @theme_fg_color;
+}
+
+.error {
+  padding: 10px;
+  background: @error_bg_color;
+  color: @error_fg_color;
+}
+
+:not(.calc).current {
+  font-style: italic;
+}
+
+.preview-content.archlinuxpkgs,
+.preview-content.dnfpackages,
+.preview-content.aptpackages {
+  font-family: monospace;
+}

@@ -107,17 +107,52 @@
       # tuigreet draws a TUI; this stops systemd writing boot messages over it
       # (it sets StandardInput/TTYPath/TTYVHangup on the unit).
       useTextGreeter = true;
-      settings.default_session.command = lib.concatStringsSep " " [
-        "${pkgs.tuigreet}/bin/tuigreet"
-        "--time"
-        "--remember"
-        "--remember-session"
-        "--sessions ${config.services.displayManager.sessionData.desktops}/share/wayland-sessions"
-        # X11 sessions need an X server, which greetd does not start. tuigreet
-        # wraps them in `startx` (its --xsession-wrapper default), which is why
-        # displayManager.startx is enabled below.
-        "--xsessions ${config.services.displayManager.sessionData.desktops}/share/xsessions"
-      ];
+      settings.default_session.command =
+        let
+          # The hyprland package registers *two* wayland sessions, and only one
+          # of them goes through uwsm:
+          #
+          #   hyprland.desktop       Exec=.../bin/start-hyprland
+          #   hyprland-uwsm.desktop  Exec=.../bin/uwsm start -e -D Hyprland hyprland.desktop
+          #
+          # start-hyprland is not a uwsm shim. It is a small fork/waitpid
+          # watchdog that execs `Hyprland --watchdog-fd N` directly -- `strings`
+          # on the binary contains no "uwsm" at all. So picking "Hyprland"
+          # instead of "Hyprland (uwsm-managed)" runs the compositor as a bare
+          # process in session-N.scope, and everything uwsm is responsible for
+          # silently does not happen:
+          #
+          #  - graphical-session.target is never reached, so every user unit
+          #    bound to it stays dead. elephant.service is one of them, which is
+          #    why Mod+P / Mod+R then open a walker stuck on "waiting for
+          #    elephant" (see services.elephant.enable below).
+          #  - config-files/uwsm/env-hyprland is never sourced, so
+          #    AQ_DRM_DEVICES=/dev/dri/igpu is not exported and aquamarine
+          #    chooses a DRM device on its own (see ./nvidia-prime.nix).
+          #
+          # Nothing in programs.hyprland drops the non-uwsm entry -- withUWSM
+          # only sets programs.uwsm.enable, while sessionPackages picks up both
+          # .desktop files from the package -- so drop it here. The greeter must
+          # not be able to offer a session that boots into that state. lightdm
+          # hid this only because it was pointed at the uwsm entry.
+          sessions = pkgs.runCommand "greetd-sessions" { } ''
+            mkdir -p $out
+            cp -rL ${config.services.displayManager.sessionData.desktops}/share/. $out/
+            chmod -R u+w $out
+            rm $out/wayland-sessions/hyprland.desktop
+          '';
+        in
+        lib.concatStringsSep " " [
+          "${pkgs.tuigreet}/bin/tuigreet"
+          "--time"
+          "--remember"
+          "--remember-session"
+          "--sessions ${sessions}/wayland-sessions"
+          # X11 sessions need an X server, which greetd does not start. tuigreet
+          # wraps them in `startx` (its --xsession-wrapper default), which is why
+          # displayManager.startx is enabled below.
+          "--xsessions ${sessions}/xsessions"
+        ];
     };
 
     # gnome-keyring was enabled only as a side effect of the GNOME desktop
@@ -286,37 +321,55 @@
     direnv
     dunst
     git
+    grim
     hyprland
     kitty
     mc
     networkmanagerapplet
     nixfmt
     pipewire
+    playerctl
     redshift
     my-saleae-logic-2
     screen
+    slurp
     unzip
     walker
     wget
     wireplumber
+    wl-clipboard
     wofi
     zip
   ];
 
   programs.hyprland.enable = true;
   programs.hyprland.xwayland.enable = true;
-  # Required, not optional. Hyprland >= 0.56 ships `start-hyprland`, which is
-  # the Exec of the hyprland.desktop session entry and which unconditionally
-  # execs into uwsm. uwsm then needs its own systemd user units
+  # Required, not optional. The session actually used here is
+  # hyprland-uwsm.desktop, whose Exec is `uwsm start -e -D Hyprland
+  # hyprland.desktop`. uwsm needs its own systemd user units
   # (wayland-session-bindpid@, wayland-wm@, ...) to exist; this option is what
   # pulls the uwsm module in and puts them in systemd.packages. Without it uwsm
   # aborts with "Unit wayland-session-bindpid@<pid>.service not found" and the
   # compositor is never exec'd at all -- the session dies straight back to the
-  # greeter. Both session entries the hyprland package registers
-  # (hyprland.desktop and hyprland-uwsm.desktop) route through uwsm, so there is
-  # no non-uwsm path to fall back to.
+  # greeter.
+  #
+  # It does NOT make the *other* entry, hyprland.desktop, go through uwsm: that
+  # one execs start-hyprland, a plain watchdog around Hyprland with no uwsm
+  # involvement. services.greetd above filters it out of the list tuigreet
+  # offers, precisely so it cannot be chosen by accident.
   programs.hyprland.withUWSM = true;
   programs.waybar.enable = true;
+
+  # walker 2.x is only a frontend: it talks to the elephant daemon over
+  # $XDG_RUNTIME_DIR/elephant/elephant.sock and gets every provider (runner,
+  # desktopapplications, calc, ...) from it. With no elephant running, walker
+  # starts, fails to connect and exits without ever mapping a surface -- the
+  # Mod+P / Mod+R binds fire and Hyprland logs "[executor] Executing walker",
+  # but nothing appears and nothing is logged. This module ships the systemd
+  # user unit, which is WantedBy=graphical-session.target -- a target only ever
+  # reached when the session is started through uwsm, hence the session
+  # filtering in services.greetd above.
+  services.elephant.enable = true;
 
   programs.dconf.enable = true;
   programs.nix-ld.enable = true;

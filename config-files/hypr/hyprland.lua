@@ -61,6 +61,13 @@ local webbrowser  = "brave"
 local menu        = "walker"
 local tmux        = "kitty bash -c 'tmux new-session -A -s main'"
 local mc          = "kitty mc"
+-- rc.lua Mod+r is awful.prompt (a run-a-command prompt), which is a different
+-- thing from Mod+p / menubar. walker's runner provider is the closest match.
+local runner      = "walker --provider runner"
+-- rc.lua uses `shutter -s`. shutter is an X11 app: under Wayland its region
+-- select only ever sees XWayland clients, so the native grim+slurp pair
+-- replaces it. Region to clipboard, same as shutter's selection mode.
+local screenshot  = [[grim -g "$(slurp)" - | wl-copy]]
 
 
 -------------------
@@ -276,51 +283,120 @@ hl.device({
 ---------------------
 ---- KEYBINDINGS ----
 ---------------------
+--
+-- Translated from config-files/awesome/rc.lua so both sessions feel the same.
+-- Every bind names the awesome key it came from; rc.lua's modkey is Mod4,
+-- which is the same physical key as SUPER. Bindings that awesome's model can
+-- express and Hyprland's cannot are listed in the GAPS block at the end of
+-- this section rather than silently approximated.
 
-local mainMod = "SUPER" -- Sets "Windows" key as main modifier
+local mainMod = "SUPER" -- Mod4 in rc.lua
 
--- My Programs
-hl.bind(mainMod .. " + return",         hl.dsp.exec_cmd(terminal))
-hl.bind(mainMod .. " + SHIFT + return", hl.dsp.exec_cmd(tmux))
-hl.bind(mainMod .. " + W",              hl.dsp.exec_cmd(webbrowser))
-hl.bind(mainMod .. " + M",              hl.dsp.exec_cmd(mc))
-hl.bind(mainMod .. " + E",              hl.dsp.exec_cmd(fileManager))
-
--- Example binds, see https://wiki.hypr.land/Configuring/Basics/Binds/ for more
-hl.bind(mainMod .. " + SHIFT + C", hl.dsp.window.close())
-hl.bind(mainMod .. " + SHIFT + Q", hl.dsp.exit())
-hl.bind(mainMod .. " + V",         hl.dsp.window.float({ action = "toggle" }))
-hl.bind(mainMod .. " + P",         hl.dsp.exec_cmd(menu))
--- hl.bind(mainMod .. " + P", hl.dsp.window.pseudo())        -- dwindle
--- hl.bind(mainMod .. " + J", hl.dsp.layout("togglesplit"))  -- dwindle
-
--- Move focus with mainMod + HJKL
-hl.bind(mainMod .. " + H", hl.dsp.focus({ direction = "left" }))
-hl.bind(mainMod .. " + L", hl.dsp.focus({ direction = "right" }))
-hl.bind(mainMod .. " + K", hl.dsp.focus({ direction = "up" }))
-hl.bind(mainMod .. " + J", hl.dsp.focus({ direction = "down" }))
-
--- Switch workspaces with mainMod + [0-9]
--- Move active window to a workspace with mainMod + SHIFT + [0-9]
-for i = 1, 10 do
-    local key = i % 10 -- 10 maps to key 0
-    hl.bind(mainMod .. " + " .. key,         hl.dsp.focus({ workspace = i }))
-    hl.bind(mainMod .. " + SHIFT + " .. key, hl.dsp.window.move({ workspace = i }))
+-- awesome's c:move_to_screen() has no dispatcher here: hl.dsp.window.move
+-- accepts only direction, x+y(+relative), workspace, into_group and
+-- out_of_group -- there is no `monitor` key (the validator says so verbatim).
+-- Rebuild it from the parts that do exist. Moving the window to whichever
+-- workspace is currently active on the neighbouring monitor puts it on that
+-- monitor and carries focus with it, which is what move_to_screen does.
+local function move_to_monitor(delta)
+    return function()
+        local monitors = hl.get_monitors()
+        if #monitors < 2 then
+            return
+        end
+        local current
+        for i, m in ipairs(monitors) do
+            if m.focused then
+                current = i
+            end
+        end
+        if not current then
+            return
+        end
+        local target = monitors[((current - 1 + delta) % #monitors) + 1]
+        if target.active_workspace then
+            hl.dispatch(hl.dsp.window.move({ workspace = target.active_workspace.id }))
+        end
+    end
 end
 
--- Move to next/previous workspace
-hl.bind(mainMod .. " + O", hl.dsp.window.move({ workspace = "+1" }))
-hl.bind(mainMod .. " + I", hl.dsp.window.move({ workspace = "-1" }))
+-- rc.lua cycles awful.layout.layouts, which has 13 entries. Hyprland ships two
+-- tiling layouts, so this toggles; Mod+Shift+space ("previous layout") lands on
+-- the same place, which is the closest honest mapping.
+local function toggle_layout()
+    local current = hl.get_config("general.layout")
+    hl.exec_cmd("hyprctl keyword general:layout " .. (current == "master" and "dwindle" or "master"))
+end
 
--- Example special workspace (scratchpad)
-hl.bind(mainMod .. " + S",         hl.dsp.workspace.toggle_special("magic"))
-hl.bind(mainMod .. " + SHIFT + S", hl.dsp.window.move({ workspace = "special:magic" }))
+
+-- Launchers -- rc.lua "Standard program" and "Custom launchers"
+hl.bind(mainMod .. " + return",         hl.dsp.exec_cmd(terminal))    -- Mod+Return
+hl.bind(mainMod .. " + SHIFT + return", hl.dsp.exec_cmd(tmux))        -- Mod+Shift+Return
+hl.bind(mainMod .. " + M",              hl.dsp.exec_cmd(mc))          -- Mod+m
+hl.bind(mainMod .. " + W",              hl.dsp.exec_cmd(webbrowser))  -- Mod+w
+hl.bind(mainMod .. " + P",              hl.dsp.exec_cmd(menu))        -- Mod+p, menubar.show()
+hl.bind(mainMod .. " + R",              hl.dsp.exec_cmd(runner))      -- Mod+r, mypromptbox:run()
+hl.bind(mainMod .. " + SHIFT + S",      hl.dsp.exec_cmd(screenshot))  -- Mod+Shift+s
+hl.bind(mainMod .. " + E",              hl.dsp.exec_cmd(fileManager)) -- no rc.lua equivalent; kept
+
+-- Session
+hl.bind(mainMod .. " + SHIFT + Q", hl.dsp.exit())                     -- Mod+Shift+q, awesome.quit
+hl.bind(mainMod .. " + CTRL + R",  hl.dsp.exec_cmd("hyprctl reload")) -- Mod+Ctrl+r, awesome.restart
+
+-- Focus
+hl.bind(mainMod .. " + J",         hl.dsp.window.cycle_next())              -- Mod+j, focus.byidx(1)
+hl.bind(mainMod .. " + K",         hl.dsp.window.cycle_next("prev"))        -- Mod+k, focus.byidx(-1)
+hl.bind(mainMod .. " + SHIFT + J", hl.dsp.window.swap({ next = true }))     -- Mod+Shift+j, swap.byidx(1)
+hl.bind(mainMod .. " + SHIFT + K", hl.dsp.window.swap({ prev = true }))     -- Mod+Shift+k, swap.byidx(-1)
+hl.bind(mainMod .. " + CTRL + J",  hl.dsp.focus({ monitor = "+1" }))        -- Mod+Ctrl+j, focus_relative(1)
+hl.bind(mainMod .. " + CTRL + K",  hl.dsp.focus({ monitor = "-1" }))        -- Mod+Ctrl+k, focus_relative(-1)
+hl.bind(mainMod .. " + U",         hl.dsp.focus({ urgent_or_last = true })) -- Mod+u, urgent.jumpto
+hl.bind(mainMod .. " + tab",       hl.dsp.focus({ last = true }))           -- Mod+Tab, focus.history.previous
+
+-- Not from rc.lua. Mod+HJKL was directional focus before this rewrite and
+-- awesome has no directional focus at all, so it moves to the arrows rather
+-- than disappearing. Delete these four if you want strict parity.
+hl.bind(mainMod .. " + left",  hl.dsp.focus({ direction = "left" }))
+hl.bind(mainMod .. " + right", hl.dsp.focus({ direction = "right" }))
+hl.bind(mainMod .. " + up",    hl.dsp.focus({ direction = "up" }))
+hl.bind(mainMod .. " + down",  hl.dsp.focus({ direction = "down" }))
+
+-- Client -- rc.lua clientkeys
+hl.bind(mainMod .. " + SHIFT + C",     hl.dsp.window.close())                                            -- Mod+Shift+c
+hl.bind(mainMod .. " + F",             hl.dsp.window.fullscreen({ mode = "fullscreen", action = "toggle" })) -- Mod+f
+hl.bind(mainMod .. " + CTRL + space",  hl.dsp.window.float({ action = "toggle" }))                       -- Mod+Ctrl+space
+hl.bind(mainMod .. " + T",             hl.dsp.window.pin())                                              -- Mod+t, c.ontop (see GAPS)
+hl.bind(mainMod .. " + CTRL + M",      hl.dsp.window.fullscreen({ mode = "maximized", action = "toggle" })) -- Mod+Ctrl+m
+hl.bind(mainMod .. " + SHIFT + M",     hl.dsp.window.fullscreen({ mode = "maximized", action = "toggle" })) -- Mod+Shift+m (see GAPS)
+hl.bind(mainMod .. " + CTRL + return", hl.dsp.layout("swapwithmaster"))                                  -- Mod+Ctrl+Return
+hl.bind(mainMod .. " + I",             move_to_monitor(1))                                               -- Mod+i, move_to_screen(+1)
+hl.bind(mainMod .. " + O",             move_to_monitor(-1))                                              -- Mod+o, move_to_screen(-1)
+
+-- Layout
+hl.bind(mainMod .. " + L",             hl.dsp.window.resize({ x = 40, y = 0 }))  -- Mod+l, incmwfact(0.05)
+hl.bind(mainMod .. " + H",             hl.dsp.window.resize({ x = -40, y = 0 })) -- Mod+h, incmwfact(-0.05)
+hl.bind(mainMod .. " + SHIFT + H",     hl.dsp.layout("addmaster"))               -- Mod+Shift+h, incnmaster(1)
+hl.bind(mainMod .. " + SHIFT + L",     hl.dsp.layout("removemaster"))            -- Mod+Shift+l, incnmaster(-1)
+hl.bind(mainMod .. " + space",         toggle_layout)                            -- Mod+space, layout.inc(1)
+hl.bind(mainMod .. " + SHIFT + space", toggle_layout)                            -- Mod+Shift+space, layout.inc(-1)
+
+-- Tags -> workspaces. rc.lua binds 1..9; 10 (key 0) is a Hyprland extra.
+for i = 1, 10 do
+    local key = i % 10 -- 10 maps to key 0
+    hl.bind(mainMod .. " + " .. key,         hl.dsp.focus({ workspace = i }))       -- Mod+N, tag:view_only()
+    hl.bind(mainMod .. " + SHIFT + " .. key, hl.dsp.window.move({ workspace = i })) -- Mod+Shift+N, move_to_tag()
+end
+
+-- Scratchpad. No rc.lua counterpart -- awesome minimises instead (see GAPS).
+-- Moving a window here was on Mod+Shift+S, which is now the screenshot key.
+hl.bind(mainMod .. " + S",        hl.dsp.workspace.toggle_special("magic"))
+hl.bind(mainMod .. " + CTRL + S", hl.dsp.window.move({ workspace = "special:magic" }))
 
 -- Scroll through existing workspaces with mainMod + scroll
 hl.bind(mainMod .. " + mouse_down", hl.dsp.focus({ workspace = "e+1" }))
 hl.bind(mainMod .. " + mouse_up",   hl.dsp.focus({ workspace = "e-1" }))
 
--- Move/resize windows with mainMod + LMB/RMB and dragging.
+-- Move/resize windows with mainMod + LMB/RMB and dragging -- rc.lua clientbuttons.
 -- These are the old `bindm` lines. There is no `bindm` equivalent in the Lua
 -- API: hl.bind() never sets the keybind's `mouse` flag, so the `{ mouse = true }`
 -- opt that upstream's example/hyprland.lua passes here is silently ignored
@@ -332,7 +408,8 @@ hl.bind(mainMod .. " + mouse_up",   hl.dsp.focus({ workspace = "e-1" }))
 hl.bind(mainMod .. " + mouse:272", hl.dsp.window.drag())
 hl.bind(mainMod .. " + mouse:273", hl.dsp.window.resize())
 
--- Laptop multimedia keys for volume and LCD brightness
+-- Laptop multimedia keys for volume and LCD brightness.
+-- rc.lua binds only the two brightness keys; the rest are Hyprland extras.
 hl.bind("XF86AudioRaiseVolume",  hl.dsp.exec_cmd("wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+"), { locked = true, repeating = true })
 hl.bind("XF86AudioLowerVolume",  hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"),      { locked = true, repeating = true })
 hl.bind("XF86AudioMute",         hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"),     { locked = true, repeating = true })
@@ -345,6 +422,30 @@ hl.bind("XF86AudioNext",  hl.dsp.exec_cmd("playerctl next"),       { locked = tr
 hl.bind("XF86AudioPause", hl.dsp.exec_cmd("playerctl play-pause"), { locked = true })
 hl.bind("XF86AudioPlay",  hl.dsp.exec_cmd("playerctl play-pause"), { locked = true })
 hl.bind("XF86AudioPrev",  hl.dsp.exec_cmd("playerctl previous"),   { locked = true })
+
+-- GAPS -- rc.lua bindings deliberately left unbound, because Hyprland's model
+-- cannot express them. Do not "fix" these by inventing approximations.
+--
+--   Mod+Ctrl+h / Mod+Ctrl+l   incncol(+/-1). The master layout has a master
+--                             count but no column count; there is no layoutmsg
+--                             for it.
+--   Mod+Ctrl+n                awful.client.restore(). Hyprland has no minimise
+--                             state to restore from. The scratchpad on Mod+S
+--                             is the nearest thing.
+--   Mod+x                     the Lua eval prompt. The equivalent here is
+--                             `hyprctl dispatch '<lua>'` from a terminal, which
+--                             does evaluate in the compositor, but there is no
+--                             in-compositor prompt widget to bind to.
+--   Mod+Ctrl+N                awful.tag.viewtoggle(). A Hyprland monitor shows
+--                             exactly one workspace at a time; viewing two tags
+--                             at once has no counterpart.
+--   Mod+Ctrl+Shift+N          c:toggle_tag(). A window lives on exactly one
+--                             workspace. (hl.dsp.window.tag exists but drives
+--                             window rules, not visibility -- not the same
+--                             thing.)
+--   Mod+Shift+m               maximized_horizontal. Hyprland's "maximized"
+--                             covers both axes, so this is bound to the same
+--                             thing as Mod+Ctrl+m rather than left dead.
 
 
 --------------------------------

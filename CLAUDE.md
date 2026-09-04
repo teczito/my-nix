@@ -163,6 +163,15 @@ to. Any editor or tool is safe. To wire up a new one, `ln -s /etc/nixos/config-f
 > reintroduce inode-preserving contortions such as `cat new > repo/file` to "protect the link"; that
 > redirect truncates the target before the source is read, and destroys the file if the source is missing.
 
+`config-files/walker/` is **walker 2.x format** (migrated 2026-09-04 from 0.13, which shared none of the
+schema). Two things about it are easy to get wrong. walker is only a frontend: with no `elephant` daemon
+on `$XDG_RUNTIME_DIR/elephant/elephant.sock` it starts, fails to connect and exits without mapping a
+surface, so a bind firing `walker` looks like a broken keybind — `services.elephant.enable` in
+`configuration.nix` is what prevents that. And an unrecognised key in `config.toml` is *silently dropped*
+(`Walker::new` logs the deserialize error and carries on with defaults), which is why the stale 0.13 file
+sat here for months looking fine while doing nothing. Both theme files carry their own re-derive command
+against `pkgs.walker.src`; run those after a walker update rather than editing them blind.
+
 `config-files/mc/` is an ordinary directory, not linked — `~/.config/mc/` exists separately and holds only
 `ini`/`panels.ini`, so `config-files/mc/mc.keymap` has no live counterpart at all. `config-files/vim/` and
 `config-files/ti/` have no `~/.config` counterpart by design; they are the two wired into the build above.
@@ -172,6 +181,34 @@ A rebuild never deploys any of these.
 `none+awesome`), Hyprland runs on Wayland. Session-specific environment variables set in
 `~/.config/hypr/hyprland.lua` are inherited by every client including XWayland ones, so a bad `hl.env()`
 line there produces symptoms that appear only under Hyprland and not under awesome.
+
+**The Hyprland keybinds are a deliberate translation of the awesome ones, and the two drift apart if
+edited alone.** `hyprland.lua`'s KEYBINDINGS section mirrors `rc.lua`'s `globalkeys`/`clientkeys`/tag
+loop bind for bind, and each line names the awesome key it came from; the section ends in a `GAPS`
+comment listing the rc.lua binds that Hyprland's model cannot express (`incncol`, `client.restore`,
+the Lua eval prompt, viewing or tagging a client onto several tags at once). Change a binding in one
+file and change it in the other. Two argument shapes there could not be exercised without a live
+Hyprland session and are the first suspects if a key misbehaves: `hl.dsp.window.cycle_next("prev")`
+(string passthrough, assumed) and whether `hl.dsp.window.resize({ x = 40, y = 0 })` is a delta or an
+absolute size. Also note `addmaster`/`removemaster`/`swapwithmaster` are `layoutmsg`s that only the
+**master** layout implements, and `general.layout` here is still dwindle — those three keys are no-ops
+until `Mod+space` toggles the layout over.
+
+The useful discovery trick for this API: the Lua bindings validate lazily, so `hl.dsp.*(...)` accepts
+almost anything at construction time and `Hyprland --verify-config` will not catch a wrong option key.
+The accepted keys are in the binary's own error strings instead.
+`which Hyprland` is a setuid wrapper you cannot read, so go through the store path:
+
+```bash
+strings "$(nix eval --raw /etc/nixos#nixosConfigurations.nixos.config.programs.hyprland.package)/bin/.Hyprland-wrapped" \
+  | grep -E '^hl\.[a-z_.]+:'
+```
+
+That prints lines like
+`hl.window.move: unrecognized arguments. Expected one of: direction, x+y(+relative), workspace,
+into_group, out_of_group`, which is how the missing `monitor` key (and so the need for the
+`move_to_monitor` helper) was found. To check that every bind parsed and that none collide, prepend a
+wrapper that shadows `hl.bind`, logs `kb.modmask`/`kb.key`, and run `--verify-config` on that copy.
 
 Hyprland env changes need a full logout/login; `hyprctl reload` does not re-export them.
 
@@ -420,10 +457,9 @@ Do not try to test keybinds by injecting keys into a nested instance. `wtype` re
 triggers the bind handler, and a `.conf` control instance fails identically — the result is void either
 way, so it proves nothing about the Lua binds.
 
-**Hyprland is started by uwsm, and this is not optional.** Hyprland ≥ 0.56 ships a `start-hyprland`
-launcher which is the `Exec` of `hyprland.desktop` and which unconditionally execs into uwsm. uwsm needs
-its own systemd *user* units (`wayland-session-bindpid@`, `wayland-wm@`, `wayland-wm-env@`, …), and those
-only exist because `programs.hyprland.withUWSM = true` pulls in the uwsm module, which adds the package to
+**Hyprland is started by uwsm, and this is not optional.** uwsm needs its own systemd *user* units
+(`wayland-session-bindpid@`, `wayland-wm@`, `wayland-wm-env@`, …), and those only exist because
+`programs.hyprland.withUWSM = true` pulls in the uwsm module, which adds the package to
 `systemd.packages`. Without it the session dies straight back to the greeter, with the compositor never
 exec'd at all:
 
@@ -433,11 +469,56 @@ uwsm[<pid>]: Command '['systemctl','--user','start','wayland-session-bindpid@<pi
              returned non-zero exit status 5.
 ```
 
-Both session entries the hyprland package registers (`hyprland.desktop` and `hyprland-uwsm.desktop`) route
-through uwsm, so there is no non-uwsm entry to fall back to. When diagnosing this, note that
-`start-hyprland` execs uwsm in place, so the PID keeps its identity and shows up in the journal as
-`python3.x` — and a genuine Hyprland failure would instead leave log lines under
+When diagnosing that one, note that `uwsm start` execs in place, so the PID keeps its identity and shows
+up in the journal as `python3.x` — and a genuine Hyprland failure would instead leave log lines under
 `/run/user/1000/hypr/<instance>/`; if that directory does not exist, the compositor never ran.
+
+**The hyprland package registers two session entries and only one of them uses uwsm.** An earlier revision
+of this file claimed both route through uwsm and that `start-hyprland` "unconditionally execs into uwsm".
+Both claims are wrong, and believing them costs a working session:
+
+| entry | `Exec` | uwsm? |
+| --- | --- | --- |
+| `hyprland.desktop` | `…/bin/start-hyprland` | **no** |
+| `hyprland-uwsm.desktop` | `…/bin/uwsm start -e -D Hyprland hyprland.desktop` | yes |
+
+`start-hyprland` is not a uwsm shim. It is a small ELF watchdog that forks `Hyprland --watchdog-fd N`
+directly — `strings` on it contains no `uwsm` at all, only `fork`/`waitpid`/`prctl`/`execvp`:
+
+```bash
+strings "$(nix eval --raw /etc/nixos#nixosConfigurations.nixos.config.programs.hyprland.package)/bin/start-hyprland" | grep -ci uwsm   # 0
+```
+
+`programs.hyprland.withUWSM` does **not** change this — it only sets `programs.uwsm.enable`, while the
+module's `services.displayManager.sessionPackages = [ cfg.package ]` picks up *both* `.desktop` files. So
+"Hyprland" and "Hyprland (uwsm-managed)" both appear in the greeter, and choosing the first one starts the
+compositor as a bare process in `session-N.scope`.
+
+**That failure is silent and does not look like a session problem.** The desktop comes up and works. What
+is missing is everything uwsm was responsible for:
+
+- `graphical-session.target` is never reached, so every user unit bound to it stays dead. `elephant.service`
+  is `WantedBy=graphical-session.target`, so walker opens and sits on **"waiting for elephant"** — which
+  reads as a walker or keybind bug, not a session-manager one.
+- `config-files/uwsm/env{,-hyprland}` is never sourced, so `AQ_DRM_DEVICES=/dev/dri/igpu` is not exported
+  and aquamarine picks a DRM device on its own.
+
+Diagnose it in one line — under uwsm this is `active`, otherwise `inactive`:
+
+```bash
+systemctl --user is-active graphical-session.target
+```
+
+Corroborate with `pgrep -x start-hyprland` (any hit means no uwsm: under uwsm the compositor has no such
+parent), and with `journalctl -b | grep -c uwsm` (zero for a whole boot means the non-uwsm entry ran). The
+journal identifier differs too: uwsm sessions log as `uwsm_hyprland.desktop`, which is what every log-reading
+recipe in this file assumes.
+
+`services.greetd` in `configuration.nix` therefore does not hand tuigreet
+`displayManager.sessionData.desktops` directly. It passes a filtered copy — a `runCommand` that deletes
+`wayland-sessions/hyprland.desktop` — so the trap entry cannot be selected at all. lightdm hid the problem
+only because it happened to be pointed at the uwsm entry; tuigreet lists whatever is in the directory and
+`--remember-session` then pins the wrong choice across reboots.
 
 Environment for the session belongs in `config-files/uwsm/env` (all compositors) or
 `config-files/uwsm/env-hyprland` (Hyprland only, matched by lowercased `XDG_CURRENT_DESKTOP`). These are
