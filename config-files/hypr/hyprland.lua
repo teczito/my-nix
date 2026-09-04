@@ -77,8 +77,10 @@ local screenshot  = [[grim -g "$(slurp)" - | wl-copy]]
 -- Autostart necessary processes (like notifications daemons, status bars, etc.)
 -- Or execute your favorite apps at launch like this:
 
+-- NOTE: waybar is NOT started here. `programs.waybar.enable` installs the
+-- package's own waybar.service (WantedBy=graphical-session.target), which uwsm
+-- reaches, so starting it from the compositor as well gives you two bars.
 hl.on("hyprland.start", function()
-    hl.exec_cmd("waybar")
     -- hl.exec_cmd(terminal)
     -- hl.exec_cmd("nm-applet")
 end)

@@ -525,3 +525,12 @@ Environment for the session belongs in `config-files/uwsm/env` (all compositors)
 sourced as POSIX shell — variables need `export`, unlike the `hl.env(K, V)` syntax of `hyprland.lua` — and
 they are applied *before* the compositor starts, which is why anything affecting device or backend
 selection has to go there rather than in `hyprland.lua`.
+
+**Do not autostart waybar from `hyprland.lua`.** `programs.waybar.enable` puts the package into
+`systemd.packages`, and the package ships its own `waybar.service` with `WantedBy=graphical-session.target`
+— a target only uwsm reaches. So under the uwsm session the unit already runs the bar, and the
+`hl.exec_cmd("waybar")` that used to sit in the `hyprland.start` hook produced a *second* one stacked on the
+first. Diagnose with `pgrep -a waybar` and check the parents: PPID `systemd --user` is the unit, PPID the
+compositor is the config. The unit is the one to keep (`Restart=on-failure`, `ExecReload` sends SIGUSR2,
+dies with the session). Note `hyprland.conf` still carries `exec-once = waybar`; that is deliberate, since a
+non-uwsm session never reaches `graphical-session.target` and so never starts the unit.
