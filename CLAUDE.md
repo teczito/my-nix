@@ -240,6 +240,49 @@ Two conversion traps, both from upstream's own `share/hypr/hyprland.lua` example
 - `.conf` flag suffixes map to options, not syntax: `bindel` → `{ locked = true, repeating = true }`,
   `bindl` → `{ locked = true }`.
 
+**`hl.get_monitors()` returns an empty list while the config is being parsed.** The backend enumerates
+monitors *after* the Lua config is read, so anything in `hyprland.lua` that branches on the monitors
+actually present cannot be written as a top-level `if`. The natural implementation of "disable the laptop
+panel only when docked" —
+
+```lua
+if #hl.get_monitors() > 1 then hl.monitor({ output = LAPTOP, disabled = true }) end   -- never fires
+```
+
+— sees zero monitors on every start and silently does nothing. Verified with a probe config in a nested
+instance (`Hyprland -c probe.lua`) that prints the list at each stage:
+
+```
+PROBE parse-time: 0 {}
+PROBE monitor.added(WAYLAND-1): 1 {WAYLAND-1[]}
+PROBE hyprland.start: 1 {WAYLAND-1[]}
+```
+
+So the decision has to be re-made from events — `hl.on("monitor.added"/"monitor.removed", …)`, with
+`hl.on("hyprland.start", …)` as the reconciliation once every monitor is in, and `hl.on("config.reloaded",
+…)` because a reload re-runs the static rules. That is how the MONITORS block in `hyprland.lua` now does
+it, and the shape matters: the panel deliberately gets **no static rule of its own**, falling through to
+the `output = ""` catch-all, so *enabled* is the state it holds whenever the handler has not run yet. An
+undocked machine is then never left with no display at all. Do not "simplify" it back to a static
+`disabled = true`.
+
+Two related notes on this API. `hl.get_monitors()` lists only **enabled** monitors — the same split as
+`hyprctl monitors` vs `hyprctl monitors all` — so a disabled panel is invisible to it and the reliable
+test is to count the monitors that are *not* the panel. And guard the handler with a
+"state already matches" early return: it calls `hl.monitor()`, which re-enters through the very events
+that invoked it.
+
+**Pin monitor modes explicitly; do not rely on `mode = "preferred"` when anything calls `hl.monitor()` at
+runtime.** That call re-creates the outputs — their IDs visibly shift, `1,2,3` → `2,3,4` in
+`hyprctl monitors` — and on re-creation `"preferred"` re-resolved all three 2560×1440 Iiyamas to
+**1920×1080** and left them there. The failure is silent and points the wrong way: positions stay correct,
+so the layout looks right while the resolution is wrong. `mode = "2560x1440@59.951"` survives it. The
+full-resolution check after any monitor-rule change is:
+
+```bash
+hyprctl monitors | grep -E '^Monitor|^\s+[0-9]+x[0-9]+@'
+```
+
 **`hyprctl dispatch` changes syntax under a Lua config.** The argument is parsed as Lua rather than as a
 dispatcher name plus arguments, so every classic invocation becomes a syntax error:
 

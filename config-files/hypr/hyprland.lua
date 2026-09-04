@@ -39,14 +39,89 @@ hl.config({
 ------------------
 
 -- See https://wiki.hypr.land/Configuring/Basics/Monitors/
-hl.monitor({ output = "desc:Iiyama North America PL2796QS 1179915302805", mode = "preferred", position = "0x0",    scale = 1 })
-hl.monitor({ output = "desc:Iiyama North America PL2796QS 1179911801568", mode = "preferred", position = "2560x0", scale = 1 })
-hl.monitor({ output = "desc:Chimei Innolux Corporation 0x15F6",           mode = "preferred", position = "5120x0", scale = 1 })
+--
+-- Physical desk layout, left to right, mirroring autorandr/ruben-office (the
+-- X11 side of these same three monitors):
+--
+--     [ PL2796QS 801568 ] [ PL2792Q  main ] [ PL2796QS 302805 ]   laptop
+--            0x0                2560x0             5120x0        (panel off)
+--
+-- The laptop sits to the right of all three. Match on `desc:` rather than on
+-- DP-N: connector numbering moves with the dock (autorandr carries both a
+-- DP-1-x and a DP-2-x profile for this one desk), the EDID serials do not.
+--
+-- The modes are pinned rather than left at `mode = "preferred"`, and that is
+-- load-bearing, not tidiness: the runtime hl.monitor() call below re-creates the
+-- outputs (their monitor IDs visibly shift), and on re-creation "preferred"
+-- re-resolved to 1920x1080 and stayed there. An explicit mode survives it.
+hl.monitor({ output = "desc:Iiyama North America PL2796QS 1179911801568", mode = "2560x1440@59.951", position = "0x0",    scale = 1 })
+hl.monitor({ output = "desc:Iiyama North America PL2792Q 1226151422212",  mode = "2560x1440@59.951", position = "2560x0", scale = 1 })
+hl.monitor({ output = "desc:Iiyama North America PL2796QS 1179915302805", mode = "2560x1440@59.951", position = "5120x0", scale = 1 })
 hl.monitor({ output = "",                                                mode = "preferred", position = "auto",   scale = 1 })
 
-hl.workspace_rule({ workspace = "1", monitor = "desc:Iiyama North America PL2796QS 1179915302805", default = true })
-hl.workspace_rule({ workspace = "2", monitor = "desc:Iiyama North America PL2796QS 1179911801568", default = true })
-hl.workspace_rule({ workspace = "3", monitor = "desc:Chimei Innolux Corporation 0x15F6",           default = true })
+-- The laptop panel is switched off, but only for as long as at least one
+-- external monitor is actually live -- undocked, it stays on, so the machine is
+-- never left with no display at all. Note the panel deliberately has no rule of
+-- its own above: it falls through to the catch-all, so *enabled* is the state it
+-- holds whenever the logic below has not run yet. The fallback fails safe.
+--
+-- Hyprland's config language has no conditional, but the Lua format can decide
+-- at runtime. One caveat, established by experiment rather than assumed:
+-- hl.get_monitors() returns an EMPTY list while the config is being parsed --
+-- the backend enumerates monitors afterwards and they arrive as `monitor.added`.
+-- So this cannot be a top-level `if`; it has to be re-decided from the events.
+local LAPTOP_OUTPUT = "desc:Chimei Innolux Corporation 0x15F6"
+
+local function is_laptop(m)
+    return m.name == "eDP-1"
+        or (m.description or ""):find("Chimei Innolux", 1, true) ~= nil
+end
+
+-- nil rather than false, so the first event always applies a state.
+local laptop_disabled = nil
+
+local function sync_laptop_panel()
+    -- A disabled monitor drops out of hl.get_monitors() entirely (the same split
+    -- as `hyprctl monitors` vs `hyprctl monitors all`), so counting externals is
+    -- reliable in a way that looking for the panel itself would not be.
+    local externals = 0
+    for _, m in ipairs(hl.get_monitors()) do
+        if not is_laptop(m) then
+            externals = externals + 1
+        end
+    end
+
+    local want_disabled = externals > 0
+    -- Bail when the state already matches. This is also what stops the
+    -- hl.monitor() call below from re-entering through the very events that
+    -- called us.
+    if want_disabled == laptop_disabled then
+        return
+    end
+    laptop_disabled = want_disabled
+
+    if want_disabled then
+        hl.monitor({ output = LAPTOP_OUTPUT, disabled = true })
+    else
+        hl.monitor({ output = LAPTOP_OUTPUT, mode = "preferred", position = "auto", scale = 1 })
+    end
+end
+
+hl.on("hyprland.start",  sync_laptop_panel)
+hl.on("monitor.added",   sync_laptop_panel)
+hl.on("monitor.removed", sync_laptop_panel)
+hl.on("config.reloaded", function()
+    -- A reload re-runs the static rules above, which say nothing about the
+    -- panel, so re-assert whichever state the hardware currently calls for.
+    laptop_disabled = nil
+    sync_laptop_panel()
+end)
+
+-- Workspaces 1-3 run left to right across the three monitors, so 2 is the
+-- main one. 4-10 have no rule and open wherever focus happens to be.
+hl.workspace_rule({ workspace = "1", monitor = "desc:Iiyama North America PL2796QS 1179911801568", default = true })
+hl.workspace_rule({ workspace = "2", monitor = "desc:Iiyama North America PL2792Q 1226151422212",  default = true })
+hl.workspace_rule({ workspace = "3", monitor = "desc:Iiyama North America PL2796QS 1179915302805", default = true })
 
 
 ---------------------
