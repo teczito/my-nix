@@ -81,16 +81,64 @@
   # Enable the X11 windowing system.
   services = {
     displayManager = {
+      # Keep this enabled even though greetd is the login manager: this module
+      # owns services.displayManager.sessionData, which collects the xsessions/
+      # and wayland-sessions/ .desktop files tuigreet is pointed at below. Its
+      # whole config block is `mkIf cfg.enable`, so switching it off would leave
+      # tuigreet with no sessions to offer.
       enable = true;
+      # greetd does not read this -- tuigreet's --remember-session does that job
+      # -- but sessionData.autologinSession is derived from it and an assertion
+      # requires it to name a real session, so keep it accurate.
       defaultSession = "none+awesome";
     };
 
-    desktopManager.gnome = {
+    # greetd replaces lightdm, for sequencing rather than taste. lightdm starts
+    # the new session's compositor *before* it begins tearing the greeter down:
+    # on 2026-09-04 Hyprland was up at 06:55:36.03 while SIGTERM only reached
+    # session-c1.scope at 06:55:36.86, and the greeter then ignored it for the
+    # full 90 s. The compositor therefore enumerates input while the greeter
+    # still owns seat0, logind hands it revoked fds, and libinput drops the
+    # devices -- a session that looks frozen but is only deaf. greetd is a
+    # sequential state machine: the greeter exits before the session starts, so
+    # that overlap cannot happen. Full diagnosis in CLAUDE.md.
+    greetd = {
       enable = true;
+      # tuigreet draws a TUI; this stops systemd writing boot messages over it
+      # (it sets StandardInput/TTYPath/TTYVHangup on the unit).
+      useTextGreeter = true;
+      settings.default_session.command = lib.concatStringsSep " " [
+        "${pkgs.tuigreet}/bin/tuigreet"
+        "--time"
+        "--remember"
+        "--remember-session"
+        "--sessions ${config.services.displayManager.sessionData.desktops}/share/wayland-sessions"
+        # X11 sessions need an X server, which greetd does not start. tuigreet
+        # wraps them in `startx` (its --xsession-wrapper default), which is why
+        # displayManager.startx is enabled below.
+        "--xsessions ${config.services.displayManager.sessionData.desktops}/share/xsessions"
+      ];
     };
+
+    # gnome-keyring was enabled only as a side effect of the GNOME desktop
+    # module (services/desktop-managers/gnome.nix), which is gone now. The
+    # keyring is not GNOME-specific and login really was unlocking it
+    # ("gkr-pam: gnome-keyring-daemon started properly and unlocked keyring"),
+    # so enable it directly. This also puts pam_gnome_keyring into the `login`
+    # PAM stanza, which is what greetd's own stanza delegates to (it sets
+    # useDefaultRules = false and is just `auth substack login`), so the unlock
+    # keeps working without a greetd-specific enableGnomeKeyring -- that option
+    # is inert here precisely because of useDefaultRules = false.
+    gnome.gnome-keyring.enable = true;
 
     xserver = {
       enable = true;
+      # Provides `startx` and /etc/X11/xinit/xserverrc (which carries
+      # displayManager.xserverArgs). tuigreet's --xsession-wrapper defaults to
+      # `startx`, so this is what makes the awesome session launchable under
+      # greetd, which manages no X server of its own. Enabling it also turns off
+      # the lightdm auto-enable default in xserver.nix -- as does greetd.
+      displayManager.startx.enable = true;
       # Only "nvidia" belongs here. The PRIME module in ./nvidia-prime.nix adds
       # its own "modesetting" entry carrying `BusID "PCI:0:2:0"`; listing
       # "modesetting" here as well emits a second, BusID-less
@@ -164,6 +212,12 @@
   };
 
   services.libinput.touchpad.naturalScrolling = true;
+
+  # awesome's power_widget (rc.lua) requires upower_dbus, which proxies
+  # org.freedesktop.UPower on the system bus at require() time. Without the
+  # daemon the require throws `code: SERVICE_UNKNOWN`, which aborts rc.lua and
+  # drops awesome to its fallback config.
+  services.upower.enable = true;
 
   # Enable CUPS to print documents.
   services.printing.enable = true;

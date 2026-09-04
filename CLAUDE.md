@@ -86,15 +86,15 @@ e.g. `nvidia-offload blender`. That is the only supported path.
 `null` fails an assertion. Ampere is fully supported by the open kernel modules.
 
 Still do **not** set `__GLX_VENDOR_LIBRARY_NAME`, `LIBVA_DRIVER_NAME`, or similar to `nvidia` session-wide
-(in `hyprland.conf`, `environment.variables`, …) — that remains true now that the driver is installed, and
+(in `hyprland.lua`, `environment.variables`, …) — that remains true now that the driver is installed, and
 is a different thing from what `nvidia-offload` does. Setting them globally makes libglvnd hand
 `libGLX_nvidia.so` to every GLX client including those on the Intel screen, where `glXCreateNewContext`
 fails with BadValue; `nvidia-offload` sets them for one process only.
 
 Because the NVIDIA card now exposes its own DRM node, Hyprland is pinned to the iGPU with
 `export AQ_DRM_DEVICES=/dev/dri/igpu`. This lives in **`config-files/uwsm/env-hyprland`**, *not* as an
-`env =` line in `hyprland.conf`: the session is started by uwsm, which exports its environment before
-launching the compositor, whereas `hyprland.conf` is not read until Hyprland is already up — too late to
+`hl.env()` call in `hyprland.lua`: the session is started by uwsm, which exports its environment before
+launching the compositor, whereas `hyprland.lua` is not read until Hyprland is already up — too late to
 influence which DRM device aquamarine opens.
 
 **`AQ_DRM_DEVICES` is a colon-separated list, like `PATH`.** This rules out the `by-path` name that looks
@@ -170,10 +170,255 @@ A rebuild never deploys any of these.
 
 **Three desktop sessions coexist and diverge.** GNOME and awesome run on X11 (`defaultSession` is
 `none+awesome`), Hyprland runs on Wayland. Session-specific environment variables set in
-`~/.config/hypr/hyprland.conf` are inherited by every client including XWayland ones, so a bad `env =`
+`~/.config/hypr/hyprland.lua` are inherited by every client including XWayland ones, so a bad `hl.env()`
 line there produces symptoms that appear only under Hyprland and not under awesome.
 
 Hyprland env changes need a full logout/login; `hyprctl reload` does not re-export them.
+
+**Hyprland's config is Lua now (`config-files/hypr/hyprland.lua`), not `.conf`.** 0.56 shows
+"You are using the .conf config format, support for which will be removed in Hyprland 0.57." on every
+start; the fix is the Lua format, not a setting to silence it. Discovery is `hyprland.lua` first, then
+`hyprland.conf` (`Jeremy::getMainConfigPath`) — with both present the `.conf` is simply dead weight, and
+when *neither* exists Hyprland now writes a default `hyprland.lua`.
+
+Validate any edit **without logging out**:
+
+```bash
+Hyprland --verify-config -c ~/.config/hypr/hyprland.lua
+```
+
+It is strict about `hl.config` keys, `hl.monitor`/`hl.workspace_rule` fields, unresolved `hl.curve` names
+and nil dispatchers — but it does **not** validate `hl.bind`'s options table, where unknown keys are
+silently ignored. To exercise the config for real, run a nested instance against the outer session
+(`Hyprland -c <file>`, it opens a window) and query it with `hyprctl -i <instance> binds|getoption`;
+diffing that against the live instance is how this file's conversion was checked.
+
+Two conversion traps, both from upstream's own `share/hypr/hyprland.lua` example:
+
+- There is **no `bindm` in Lua.** `hl.bind()` never sets the keybind's `mouse` flag, so the
+  `{ mouse = true }` the example passes for `mouse:272`/`273` does nothing. Held-drag comes from the
+  *dispatcher* — `hl.dsp.window.drag()`/`.resize()` issue `movewindow`/`resizewindow` in mouse mode and
+  set `releasePending`. `{ drag = true }` is **not** the fix: it is an unrelated click-vs-drag option that
+  also forces `release = true`. `hyprctl binds` prints these as `bind`, not `bindm`; that is cosmetic.
+- `.conf` flag suffixes map to options, not syntax: `bindel` → `{ locked = true, repeating = true }`,
+  `bindl` → `{ locked = true }`.
+
+**`hyprctl dispatch` changes syntax under a Lua config.** The argument is parsed as Lua rather than as a
+dispatcher name plus arguments, so every classic invocation becomes a syntax error:
+
+```
+$ hyprctl dispatch exec kitty
+error: [string "return hl.dispatch(exec kitty)"]:1: ')' expected near 'kitty'
+
+ → Note: dispatch in lua is a shorthand for hl.dispatch(...), your syntax might need to be updated.
+```
+
+Write the Lua form instead — `hyprctl dispatch 'hl.dsp.exec_cmd("kitty")'`, `hyprctl dispatch
+'hl.dsp.exit()'`. Nothing in this repo shells out to `hyprctl dispatch` (waybar's only `on-click` is a
+bare `pavucontrol`), but ad-hoc commands and muscle memory break the moment `hyprland.lua` is the active
+config. Note this cuts both ways when debugging: the same command has to change form depending on whether
+the instance you are talking to was started from the `.lua` or the `.conf`.
+
+**Do not delete `hyprland.conf` while a Hyprland session that loaded it is running.** The inotify watcher
+(`CConfigWatcher::onInotifyEvent`) ignores the event mask and reloads on *any* event for a watched wd,
+including the `IN_IGNORED` a deletion produces — and `reload()` reuses the `static`-cached config path, so
+it re-parses a path that no longer exists and drops the live session to defaults. Creating `hyprland.lua`
+is safe for the same reason: only config *files* are watched, never the directory, and the cached path
+keeps the running session on `.conf` until the next login.
+
+**A frozen Hyprland session leaves no usable log by default — fix that *before* reproducing one.** The
+compositor writes to `/run/user/1000/hypr/<instance>/hyprland.log`, which is tmpfs, so a forced power-off
+destroys the only record; and `debug:disable_logs` defaults on, so that file is nearly empty anyway. Put
+this at the **top** of `hyprland.lua` — it only affects logging emitted after it is parsed:
+
+```lua
+hl.config({ debug = { disable_logs = false, enable_stdout_logs = true } })
+```
+
+`enable_stdout_logs` is the half that matters: under uwsm the compositor's stdout is journald, and
+journald here is `Storage=persistent` (`/var/log/journal`), so the log survives the power cut. Read it
+back with `journalctl -b -1 -t uwsm_hyprland.desktop`. It is verbose enough to hit journald's rate limit
+(`RateLimitBurst` 10000 / 30 s), so keep it on only while chasing something.
+
+**The rescue console is `Ctrl+Alt+F1`, not `F2` — the session itself is on VT2.** lightdm allocates VTs
+upward from `minimum-vt = 1`, which is hardcoded in the nixpkgs lightdm module (`services.xserver.tty` was
+removed upstream as "ineffective", so there is no option to change it). The greeter therefore takes VT1 and
+the user session lands on VT2 — `loginctl show-session <id> -p VTNr` confirms `VTNr=2` — and `agetty` runs
+on tty2 as well, so the two overlap. `Ctrl+Alt+F2` switches to the VT the compositor already owns: a silent
+no-op, not a dead TTY. Earlier revisions of this file recommended F2 and read its silence as evidence of a
+kernel or GPU hang; that inference was wrong.
+
+A working TTY means only the compositor is stuck, and `loginctl terminate-session <id>` drops you back to
+the greeter — copy `/run/user/1000/hypr/*/hyprland.log` onto `/home` first, it dies with the session. In
+the dead-input-devices failure below, no key reaches anything whichever VT you aim at: the compositor has
+no evdev devices to see the chord on, and Hyprland puts the VT keyboard in `K_OFF`, so the kernel will not
+switch VTs either. The power button is ACPI rather than evdev and still works — logind handles a short
+press and shuts down cleanly, which is why boot `dd8f587c` has a
+complete journal despite feeling like a forced power-off. Start sshd first (below) so there is a real way
+in. `kernel.sysrq` is `16` (sync only), so `Alt+SysRq+S` flushes but REISUB does not work unless you raise
+it to `1`.
+
+**sshd is installed but deliberately not started at boot.** `configuration.nix` sets
+`services.openssh.enable = true` and then `systemd.services.sshd.wantedBy = lib.mkForce [ ]`, so the unit
+exists, reads as `linked`, and sits `inactive` with nothing listening on 22. That is intentional — it is
+started on demand with `sudo systemctl start sshd`. Do not "fix" the inactive unit. Starting it *before*
+reproducing a compositor freeze is worth doing anyway: it gives you a second machine to debug from.
+
+**These "freezes" are dead input devices, not a wedged compositor.** Three sessions have failed this way
+(boot `505ccbe8`, compositor started 21:42:59; boot `dd8f587c`, started 22:11:41; boot `165360be`, started
+2026-09-04 06:55:36): the desktop stays drawn — waybar keeps rendering — but keyboard and mouse are both
+completely dead, which reads as a total lockup. It is not one. The compositor's event loop is alive
+throughout: on 2026-09-04 `hyprctl version`, `monitors` and `clients` all answered instantly over ssh.
+What actually happened is that the compositor came up having opened few or **no usable input devices**:
+
+```
+[libinput] event0 … event28  - not using input device '/dev/input/eventN'     ← all 29 of them
+```
+
+| session | devices rejected | devices used |
+| --- | --- | --- |
+| clean enumeration (`~/.cache/hyprland/hyprlandCrashReport212.txt`) | 0 | 11 |
+| frozen (PID 6519, boot `dd8f587c`) | 29 | 0 |
+| frozen (PID 2309, boot `165360be`, 2026-09-04) | 17 | 6 |
+
+Report 212 is **not** a healthy session, whatever an earlier revision of this file claimed: it ends in
+`Cannot open backend: no allocator available`, the `AQ_DRM_DEVICES` abort above. Only its *input
+enumeration* is clean, which is the one thing it is good for. And a partial rejection is still a total
+failure in practice — see the 2026-09-04 row and the second bug below.
+
+Counting those two lines *is* the diagnosis, and it is the first thing to run after any freeze:
+
+```bash
+journalctl -b -1 -t uwsm_hyprland.desktop | grep -c 'not using input device'
+journalctl -b -1 -t uwsm_hyprland.desktop | grep -cE 'libinput\] event[0-9]+ +- .*(is tagged by udev|device is a)'
+```
+
+Use `-b` rather than `-b -1` when you caught it live over ssh. If the session ran the `.conf` its `debug`
+block is absent, stdout logs are off and the journal stops early — the full enumeration is then only in
+`/run/user/1000/hypr/<instance>/hyprland.log`, whose tail is also buffered and can lag the live process.
+
+`hyprctl devices` over ssh says the same thing while it is still happening: empty `mice` and `keyboards`.
+
+**Root cause, established 2026-09-04: the greeter still owns seat0 while the compositor enumerates input.**
+The 2026-09-04 failure (boot `165360be`, PID 2309) was caught live over ssh instead of being power-cycled,
+and the journal is conclusive:
+
+| time | event |
+| --- | --- |
+| 06:45:37.07 | greeter session `c1` (x11, seat0) created |
+| 06:55:35.22 | session `6` (wayland) created — user logs in |
+| 06:55:36.03 | Hyprland starts |
+| ~06:55:36.3 | aquamarine enumerates input: 17 devices fail, the last 6 succeed |
+| 06:55:36.5 | `Session is not active, waiting for 5s` → `[libseat] Enabling seat` |
+| 06:55:36.86 | systemd *only now* sends SIGTERM to `session-c1.scope` |
+| 06:57:06.97 | `session-c1.scope: Stopping timed out. Killing.` — the full 90 s, then SIGKILL |
+
+lightdm starts the new session's compositor *before* it begins tearing the greeter down, and the greeter
+then ignores SIGTERM for 90 s. While `c1` is still the active session on seat0, every `TakeDevice` fd
+logind hands session 6 comes back revoked, the libevdev ioctls behind `evdev_configure_device` fail, and
+libinput marks those devices unusable. **It never re-enumerates.** The rejection order in the log shows the
+race directly — a clean cutover from failing to succeeding partway through enumeration:
+
+```
+event8,11,12,9,10,16,13,14,15,18..22,17,7,5   not using input device     (17, seat not yet active)
+event4,3,2,0,1,6                              tagged by udev, accepted   (6, seat now active)
+```
+
+Note `Session is not active, waiting for 5s` appears in clean startups too, so its presence is *not* the
+discriminator — the rejection count is.
+
+**A second, independent bug turns a partial failure into a total one.** The 6 devices libinput *did*
+create were created inside `CBackend::create()`, before Hyprland registers its `newInput` listener, so the
+compositor never receives them either. That is why `hyprctl devices` was completely empty on 2026-09-04
+even though libinput was holding 6 devices — including the built-in `AT Translated Set 2 keyboard`. Both
+halves of the device set get lost, by two different routes.
+
+**Corrected: how long you sat at the greeter is irrelevant.** An earlier revision of this file blamed
+"logging back in too fast after the greeter respawns", inferred from an 11–14 s vs 21–73 s split across a
+handful of sessions. The 2026-09-04 login came **10 minutes** after the greeter session appeared and failed
+anyway. The variable is not the delay before logging in; it is whether lightdm's asynchronous,
+sometimes-90-second greeter teardown happens to finish before the compositor enumerates input. Do not
+re-chase login timing.
+
+**Recovering a live session over ssh — no power-off needed. Verified end to end on 2026-09-04.** The
+compositor is not hung: `hyprctl version`, `monitors` and `clients` all answer instantly and it keeps
+rendering. Once the greeter is finally dead and the session owns seat0, run all three steps in order:
+
+```bash
+sudo udevadm trigger --action=add --subsystem-match=input     # 1. re-add the rejected devices
+sudo sh -c 'chvt 1; sleep 2; chvt 2'                          # 2. flush the ones Hyprland cannot see
+sudo udevadm trigger --action=add --subsystem-match=input     # 3. re-add them where Hyprland will see them
+```
+
+Step 1 recovers everything libinput rejected — on 2026-09-04 it brought back the touchpad, Intel HID and
+video-bus keys, confirmed by real `event14` gesture and tap traffic in the log. It is a **no-op for the
+devices libinput already holds**, so it cannot recover the built-in keyboard: those device objects exist,
+they are just invisible to Hyprland (the `CBackend::create()` bug above).
+
+Step 2 destroys them. A VT switch removes every input device and re-creates it — the log shows 13×
+`device removed` → `Disabling seat` → `Enabling seat` → 13× `New device` on each bounce. **Do not stop
+here**: on 2026-09-04 the resume repopulated nothing and left `hyprctl devices` completely empty, worse
+than before. That is specific to the broken state — once the session is healthy, a bounce re-creates all
+13 devices cleanly, which is why the gotcha below is a nuisance rather than a hazard. Note VT1, not VT2,
+per the rescue-console entry above.
+
+Step 3 is what finishes it, because the stale device objects are gone and Hyprland's `newInput` listener
+has been registered since startup. Result was 12 devices in `hyprctl devices`: all three `elan074f`
+touchpad nodes, `at-translated-set-2-keyboard`, and the hotkey and button devices — a fully usable desktop
+with no reboot.
+
+If it still fails, `loginctl terminate-session <id>` and a fresh login cost nothing when `hyprctl clients`
+reports no open windows — but that re-runs the same race.
+
+**Holding `Ctrl+Alt` across two VT switches does not work, and this is expected.** Bouncing
+`Ctrl+Alt+F3` → `Ctrl+Alt+F2` → `Ctrl+Alt+F3` without releasing the modifiers fails on the third chord.
+Because a VT switch destroys and re-creates every input device (above), the keyboard you return to is a
+new object with fresh xkb state holding no modifiers — the physical `Ctrl+Alt` keydown landed on a device
+that no longer exists. `F3` then arrives as a plain `F3` rather than `XF86Switch_VT_3`. Release and
+re-press the modifiers between bounces. The middle hop is unaffected because the kernel's VT keyboard
+handler keeps its own modifier state; only hops originating from the compositor's VT lose it.
+
+Ruled out with evidence, so do not re-chase: **the Lua config** (the first freeze in boot `dd8f587c` ran
+the `.conf`, and so did the whole 2026-09-04 failure — `hyprland.lua` was missing from the worktree at the
+time, so Hyprland fell back to the legacy config and failed identically; the two were also diffed in a
+nested instance and are equivalent — the same 51 binds with the
+same modmasks and keys, identical `hyprctl workspacerules`, identical resolved values across ~50 options,
+`getoption` printing Lua-set booleans as `bool: true` where hyprlang prints `int: 1`); **a GPU or kernel
+hang** (no `i915` error, no hung task, no reset in any of these boots); **an event-loop wedge** (the render
+loop demonstrably kept running throughout); and **the lid** — an earlier revision of this file chased "the
+only session ever started with the lid closed", but the second freeze had the lid open and looks identical.
+
+**Every clean Hyprland exit ends in a SIGSEGV; ignore it.** `coredumpctl` fills up with
+`.Hyprland-wrapped` SIGSEGV entries whose backtrace is identical every time and lands entirely *after*
+`main()` has returned:
+
+```
+__libc_start_call_main → exit → _dl_fini → __do_global_dtors_aux (libaquamarine)
+  → ~CBackend → ~CDRMBackend → SDRMConnector::disconnect()
+  → cancelAsyncOutput() → flushAsyncCommitEvents()        ← null deref
+```
+
+That is a teardown bug in aquamarine 0.15.0's static destructors, reached only once
+`Hyprland has reached the end` has been logged. It cannot freeze or kill a live session; it just makes
+every normal logout look like a crash. Both 2026-09-03 SIGSEGV cores (21:37:37 and 22:11:18) are this and
+nothing else. Distinguish it from the genuine startup failure, which is a **SIGABRT** in
+`CCompositor::initServer` → `throwError` — the `AQ_DRM_DEVICES` case above. A third shape exists too: a
+SIGSEGV whose `main` sits under `systemInfoRequest` is the `hyprctl` client crashing, not the compositor.
+
+There is no gdb in the system profile; get a backtrace without installing one:
+
+```bash
+nix shell nixpkgs#gdb --command coredumpctl debug <pid> --debugger-arguments='-batch -ex bt'
+```
+
+`~/.cache/hyprland/hyprlandCrashReport*.txt` is *not* written for every core — the SIGABRTs got reports,
+these SIGSEGVs did not — so `coredumpctl list` is the reliable index of what actually crashed, not that
+directory. Those reports do carry a ~50-line log tail, which is the only surviving record of a session
+whose `/run/user/1000/hypr/<instance>/hyprland.log` died with the reboot.
+
+Do not try to test keybinds by injecting keys into a nested instance. `wtype` reaches the seat but never
+triggers the bind handler, and a `.conf` control instance fails identically — the result is void either
+way, so it proves nothing about the Lua binds.
 
 **Hyprland is started by uwsm, and this is not optional.** Hyprland ≥ 0.56 ships a `start-hyprland`
 launcher which is the `Exec` of `hyprland.desktop` and which unconditionally execs into uwsm. uwsm needs
@@ -196,6 +441,6 @@ through uwsm, so there is no non-uwsm entry to fall back to. When diagnosing thi
 
 Environment for the session belongs in `config-files/uwsm/env` (all compositors) or
 `config-files/uwsm/env-hyprland` (Hyprland only, matched by lowercased `XDG_CURRENT_DESKTOP`). These are
-sourced as POSIX shell — variables need `export`, unlike the `env = K,V` syntax of `hyprland.conf` — and
+sourced as POSIX shell — variables need `export`, unlike the `hl.env(K, V)` syntax of `hyprland.lua` — and
 they are applied *before* the compositor starts, which is why anything affecting device or backend
-selection has to go there rather than in `hyprland.conf`.
+selection has to go there rather than in `hyprland.lua`.
