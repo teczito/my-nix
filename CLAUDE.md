@@ -432,13 +432,24 @@ journald here is `Storage=persistent` (`/var/log/journal`), so the log survives 
 back with `journalctl -b -1 -t uwsm_hyprland.desktop`. It is verbose enough to hit journald's rate limit
 (`RateLimitBurst` 10000 / 30 s), so keep it on only while chasing something.
 
-**The rescue console is `Ctrl+Alt+F1`, not `F2` — the session itself is on VT2.** lightdm allocates VTs
-upward from `minimum-vt = 1`, which is hardcoded in the nixpkgs lightdm module (`services.xserver.tty` was
-removed upstream as "ineffective", so there is no option to change it). The greeter therefore takes VT1 and
-the user session lands on VT2 — `loginctl show-session <id> -p VTNr` confirms `VTNr=2` — and `agetty` runs
-on tty2 as well, so the two overlap. `Ctrl+Alt+F2` switches to the VT the compositor already owns: a silent
-no-op, not a dead TTY. Earlier revisions of this file recommended F2 and read its silence as evidence of a
-kernel or GPU hang; that inference was wrong.
+**The rescue console is `Ctrl+Alt+F2` (or F3-F6) — the session itself is on VT1.** This inverted when
+greetd replaced lightdm, and the old advice has become exactly the trap it was written to warn about.
+
+lightdm allocated VTs upward from a hardcoded `minimum-vt = 1`, so the greeter took VT1 and the session
+landed on VT2. greetd instead runs the greeter and then the session on the *same* VT. Measured on the
+2026-09-11 boot:
+
+```
+$ loginctl show-session 3 -p VTNr -p Service   ->  VTNr=1, Service=greetd
+$ systemctl list-units --all "getty@*"         ->  getty@tty1.service  inactive (dead)
+```
+
+`getty@tty1.service` is dead precisely because the session owns that terminal, so pressing `Ctrl+Alt+F1`
+switches to the VT the compositor already holds: a silent no-op, not a dead TTY. No getty runs anywhere at
+boot; `autovt@.service` is aliased to `getty@.service` and logind spawns one on demand on the first
+unallocated VT, up to systemd's default `NAutoVTs=6`. Earlier revisions of this file recommended F1 for
+the same reason a still earlier one recommended F2, and read the silence as evidence of a kernel or GPU
+hang; both inferences were wrong, and the VT number has to be re-checked whenever the greeter changes.
 
 A working TTY means only the compositor is stuck, and `loginctl terminate-session <id>` drops you back to
 the greeter — copy `/run/user/1000/hypr/*/hyprland.log` onto `/home` first, it dies with the session. In
@@ -473,17 +484,28 @@ What actually happened is that the compositor came up having opened few or **no 
 | clean enumeration (`~/.cache/hyprland/hyprlandCrashReport212.txt`) | 0 | 11 |
 | frozen (PID 6519, boot `dd8f587c`) | 29 | 0 |
 | frozen (PID 2309, boot `165360be`, 2026-09-04) | 17 | 6 |
+| healthy greetd boot (2026-09-11) | 10 (all non-input) | 37 |
 
 Report 212 is **not** a healthy session, whatever an earlier revision of this file claimed: it ends in
 `Cannot open backend: no allocator available`, the `AQ_DRM_DEVICES` abort above. Only its *input
 enumeration* is clean, which is the one thing it is good for. And a partial rejection is still a total
 failure in practice — see the 2026-09-04 row and the second bug below.
 
-Counting those two lines *is* the diagnosis, and it is the first thing to run after any freeze:
+Counting those two lines is the first thing to run after any freeze:
 
 ```bash
 journalctl -b -1 -t uwsm_hyprland.desktop | grep -c 'not using input device'
 journalctl -b -1 -t uwsm_hyprland.desktop | grep -cE 'libinput\] event[0-9]+ +- .*(is tagged by udev|device is a)'
+```
+
+The raw count is not by itself the diagnosis, though, because **a healthy boot rejects devices too**. The
+2026-09-11 boot reports 10 rejected and 37 accepted, and all ten rejections are things libinput is right
+to refuse: `ST LIS3LV02DL Accelerometer` and nine ALSA jack-detection nodes (`HDA NVidia HDMI/DP,pcm=*`,
+`sof-hda-dsp Mic/Headphone/HDMI`). What matters is whether a *real* input device is in the rejected set,
+so map the event numbers back before concluding anything:
+
+```bash
+awk -v ev="event14" 'BEGIN{RS="";FS="\n"} $0 ~ "Handlers=.*"ev"( |$)" {for(i=1;i<=NF;i++) if($i ~ /^N: Name=/) print $i}' /proc/bus/input/devices
 ```
 
 Use `-b` rather than `-b -1` when you caught it live over ssh. If the session ran the `.conf` its `debug`
@@ -665,8 +687,20 @@ Diagnose it in one line — under uwsm this is `active`, otherwise `inactive`:
 systemctl --user is-active graphical-session.target
 ```
 
-Corroborate with `pgrep -x start-hyprland` (any hit means no uwsm: under uwsm the compositor has no such
-parent), and with `journalctl -b | grep -c uwsm` (zero for a whole boot means the non-uwsm entry ran). The
+Do **not** corroborate with `pgrep -x start-hyprland`. An earlier revision of this file claimed any hit
+means no uwsm, and that is backwards: `hyprland-uwsm.desktop` runs `uwsm start -e -D Hyprland
+hyprland.desktop`, i.e. it hands uwsm *the other entry*, whose `Exec` is `start-hyprland`. So in a
+correctly uwsm-managed session `start-hyprland` is the compositor process. What separates the two cases is
+its parent and cgroup — from the healthy 2026-09-11 boot:
+
+```
+$ ps -o ppid= -p $(pgrep -x start-hyprland)    ->  systemd --user
+$ cat /proc/$(pgrep -x start-hyprland)/cgroup
+0::/user.slice/user-1000.slice/user@1000.service/session.slice/wayland-wm@hyprland.desktop.service
+```
+
+A non-uwsm session leaves it in a bare `session-N.scope` instead. Corroborate with `journalctl -b | grep -c
+uwsm` (zero for a whole boot means the non-uwsm entry ran). The
 journal identifier differs too: uwsm sessions log as `uwsm_hyprland.desktop`, which is what every log-reading
 recipe in this file assumes.
 
