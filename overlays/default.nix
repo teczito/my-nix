@@ -8,19 +8,10 @@ let
   # You can change versions, add patches, set compilation flags, anything really.
   # https://nixos.wiki/wiki/Overlays
   modifications = final: prev: {
-    awesome = prev.awesome.override { gtk3Support = true; };
-
     # example = prev.example.overrideAttrs (oldAttrs: rec {
     # ...
     # });
   };
-
-  patch01 = import (
-    builtins.fetchGit {
-      url = "https://github.com/stefano-m/nix-stefano-m-nix-overlays.git";
-      rev = "0c0342bfb795c7fa70e2b760fb576a5f6f26dfff";
-    }
-  );
 
   # When applied, the unstable nixpkgs set (declared in the flake inputs) will
   # be accessible through 'pkgs.unstable'
@@ -34,5 +25,4 @@ in
 [
   additions
   modifications
-  patch01
 ]

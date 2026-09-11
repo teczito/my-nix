@@ -90,7 +90,7 @@
       # greetd does not read this -- tuigreet's --remember-session does that job
       # -- but sessionData.autologinSession is derived from it and an assertion
       # requires it to name a real session, so keep it accurate.
-      defaultSession = "none+awesome";
+      defaultSession = "hyprland-uwsm";
     };
 
     # greetd replaces lightdm, for sequencing rather than taste. lightdm starts
@@ -148,10 +148,6 @@
           "--remember"
           "--remember-session"
           "--sessions ${sessions}/wayland-sessions"
-          # X11 sessions need an X server, which greetd does not start. tuigreet
-          # wraps them in `startx` (its --xsession-wrapper default), which is why
-          # displayManager.startx is enabled below.
-          "--xsessions ${sessions}/xsessions"
         ];
     };
 
@@ -167,13 +163,15 @@
     gnome.gnome-keyring.enable = true;
 
     xserver = {
+      # No X11 session is installed anymore, but this must stay enabled:
+      # the NVIDIA module gates
+      #   boot.kernelModules = [ "nvidia" "nvidia_modeset" "nvidia_drm" ]
+      # on services.xserver.enable (nixos/modules/hardware/video/nvidia.nix),
+      # so switching it off would stop the driver's kernel modules loading at
+      # boot and break PRIME offload. videoDrivers below is read independently
+      # of this flag (`lib.elem "nvidia" config.services.xserver.videoDrivers`),
+      # so it is the list, not this option, that turns the driver on.
       enable = true;
-      # Provides `startx` and /etc/X11/xinit/xserverrc (which carries
-      # displayManager.xserverArgs). tuigreet's --xsession-wrapper defaults to
-      # `startx`, so this is what makes the awesome session launchable under
-      # greetd, which manages no X server of its own. Enabling it also turns off
-      # the lightdm auto-enable default in xserver.nix -- as does greetd.
-      displayManager.startx.enable = true;
       # Only "nvidia" belongs here. The PRIME module in ./nvidia-prime.nix adds
       # its own "modesetting" entry carrying `BusID "PCI:0:2:0"`; listing
       # "modesetting" here as well emits a second, BusID-less
@@ -184,38 +182,6 @@
       xkb.layout = "us,se";
       xkb.variant = "euro,";
       xkb.options = "grp:ctrls_toggle";
-      autoRepeatDelay = 500;
-      autoRepeatInterval = 70;
-
-      windowManager.awesome = {
-        enable = true;
-        luaModules = with pkgs; [
-          luaPackages.luarocks
-          luaPackages.luadbi
-          #luaPackages.connman_dbus
-          extraLuaPackages.connman_widget
-          extraLuaPackages.dbus_proxy
-          extraLuaPackages.enum
-          extraLuaPackages.media_player
-          extraLuaPackages.power_widget
-          extraLuaPackages.pulseaudio_dbus
-          extraLuaPackages.pulseaudio_widget
-          extraLuaPackages.upower_dbus
-        ];
-      };
-
-      xrandrHeads = [
-        {
-          output = "DP-2-1";
-        }
-        {
-          output = "DP-2-2";
-          primary = true;
-        }
-        {
-          output = "eDP-1";
-        }
-      ];
 
     };
 
@@ -228,31 +194,7 @@
     xdg-desktop-portal-wlr
   ];
 
-  location = {
-    provider = "manual";
-    latitude = 51.4866;
-    longitude = 3.9621;
-  };
-
-  services.redshift = {
-    enable = true;
-    brightness = {
-      day = "1";
-      night = "1";
-    };
-    temperature = {
-      day = 5500;
-      night = 3700;
-    };
-  };
-
   services.libinput.touchpad.naturalScrolling = true;
-
-  # awesome's power_widget (rc.lua) requires upower_dbus, which proxies
-  # org.freedesktop.UPower on the system bus at require() time. Without the
-  # daemon the require throws `code: SERVICE_UNKNOWN`, which aborts rc.lua and
-  # drops awesome to its fallback config.
-  services.upower.enable = true;
 
   # Enable CUPS to print documents.
   services.printing.enable = true;
@@ -315,7 +257,6 @@
   # $ nix search wget
   environment.systemPackages = with pkgs; [
     android-tools
-    autorandr
     brightnessctl
     btrbk
     direnv
@@ -329,7 +270,6 @@
     nixfmt
     pipewire
     playerctl
-    redshift
     my-saleae-logic-2
     screen
     slurp
@@ -338,7 +278,6 @@
     wget
     wireplumber
     wl-clipboard
-    wofi
     zip
   ];
 

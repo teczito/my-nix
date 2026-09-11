@@ -42,13 +42,15 @@ nix build .#nixosConfigurations.nixos.pkgs.my-saleae-logic-2
 `./users`, `./apps`, `./configuration.nix`, plus the home-manager NixOS module with
 `useGlobalPkgs = true` (so home-manager shares the system nixpkgs and system-level overlays).
 
-**Overlays** (`overlays/default.nix`) return a list applied in order, and two of the three are load-bearing:
+**Overlays** (`overlays/default.nix`) return a list applied in order. Only one is load-bearing now:
 
 - `additions` — imports `pkgs/`, which is why `pkgs.my-saleae-logic-2` resolves in `configuration.nix`.
-- `modifications` — rebuilds `awesome` with `gtk3Support = true`.
-- `patch01` — a `builtins.fetchGit` pinned by rev to `stefano-m/nix-stefano-m-nix-overlays`. This is the
-  only source of the `extraLuaPackages.*` attributes that `services.xserver.windowManager.awesome.luaModules`
-  depends on. It is outside the flake lock, so `nix flake update` does not move it; bump the `rev` by hand.
+- `modifications` — an empty placeholder. It used to rebuild `awesome` with `gtk3Support = true`.
+
+A third overlay, `patch01`, was a `builtins.fetchGit` of `stefano-m/nix-stefano-m-nix-overlays` pinned by
+rev and outside the flake lock. It existed solely to supply the `extraLuaPackages.*` attributes that
+awesome's `luaModules` wanted, and went with awesome. Do not reintroduce it without that need: being
+outside the lock, `nix flake update` never moved it and the rev had to be bumped by hand.
 
 **Per-user config** lives under `users/`. `users/default.nix` imports only `ruben.nix`; `teczito.nix`
 exists but is not imported. Each file defines both the system user and its `home-manager.users.<name>` block.
@@ -143,7 +145,7 @@ wired into the build:
 - `config-files/vim/.vimrc` → `programs.vim.extraConfig` in `users/ruben.nix`
 - `config-files/ti/71-ti-permissions.rules` → `services.udev.extraRules` in `configuration.nix`
 
-`config-files/hypr/`, `awesome/`, `waybar/`, `walker/`, `autorandr/`, `kitty/`, and `uwsm/` are the live
+`config-files/hypr/`, `waybar/`, `walker/`, `kitty/`, and `uwsm/` are the live
 config. Each `~/.config/<name>` is a **directory symlink** pointing at the repo:
 
 ```bash
@@ -177,17 +179,37 @@ against `pkgs.walker.src`; run those after a walker update rather than editing t
 `config-files/ti/` have no `~/.config` counterpart by design; they are the two wired into the build above.
 A rebuild never deploys any of these.
 
-**Three desktop sessions coexist and diverge.** GNOME and awesome run on X11 (`defaultSession` is
-`none+awesome`), Hyprland runs on Wayland. Session-specific environment variables set in
-`~/.config/hypr/hyprland.lua` are inherited by every client including XWayland ones, so a bad `hl.env()`
-line there produces symptoms that appear only under Hyprland and not under awesome.
+**Hyprland is the only session.** GNOME and awesome both used to be installed alongside it on X11; both
+are gone, so `defaultSession` is `hyprland-uwsm` and `wayland-sessions/` holds the only entries the
+greeter offers. There is no X11 session left, and therefore no non-Wayland fallback if the compositor
+will not start — the rescue path is the TTY and ssh, below.
 
-**The Hyprland keybinds are a deliberate translation of the awesome ones, and the two drift apart if
-edited alone.** `hyprland.lua`'s KEYBINDINGS section mirrors `rc.lua`'s `globalkeys`/`clientkeys`/tag
-loop bind for bind, and each line names the awesome key it came from; the section ends in a `GAPS`
-comment listing the rc.lua binds that Hyprland's model cannot express (`incncol`, `client.restore`,
-the Lua eval prompt, viewing or tagging a client onto several tags at once). Change a binding in one
-file and change it in the other. Two argument shapes there could not be exercised without a live
+`services.xserver.enable` is nevertheless still `true`, and must stay that way. It no longer has anything
+to do with running an X session: `nixos/modules/hardware/video/nvidia.nix` gates
+`boot.kernelModules = [ "nvidia" "nvidia_modeset" "nvidia_drm" ]` on it, so turning it off stops the
+driver's kernel modules loading at boot and breaks PRIME offload. `services.xserver.videoDrivers` is read
+independently of the flag (`lib.elem "nvidia" ...`), so it is the list, not `enable`, that turns the driver
+on. Everything else under `services.xserver` that only shaped an X session has been removed
+(`xrandrHeads`, `autoRepeatDelay`/`autoRepeatInterval`, `displayManager.startx`). What is left besides
+`enable` is `videoDrivers` and `xkb.*` — and the `xkb.*` block stays because `console.useXkbConfig` reads
+it, independently of whether X runs.
+
+**There is deliberately no colour-temperature (night-light) service.** `services.redshift` used to run here
+and was removed with the rest of the X11 leftovers: redshift talks RANDR/vidmode only. Under Hyprland it
+failed twice at session start (`RANDR Query Version` returned error -1, then `XOpenDisplay` failed, exit 1)
+and only survived because systemd's third restart landed after XWayland was up, so it attached to XWayland
+and set gamma there rather than on the real Wayland outputs — healthy-looking logs, no effect. Do not
+re-add it. The Wayland equivalents, all available as home-manager user services, are `services.gammastep`
+(closest port), `services.hyprsunset` and `services.wlsunset`; `location` went too, and any of them would
+need it back.
+
+Session-specific environment variables set in `~/.config/hypr/hyprland.lua` are inherited by every client
+including XWayland ones, so a bad `hl.env()` line there affects everything in the session.
+
+**`hyprland.lua`'s KEYBINDINGS section is now the only definition of the keymap.** It was originally a
+bind-for-bind translation of awesome's `rc.lua`, which is why the layout looks the way it does; with
+awesome removed there is no sibling file to keep in sync, and the `GAPS` block listing binds awesome could
+express and Hyprland could not has gone with it. Two argument shapes there could not be exercised without a live
 Hyprland session and are the first suspects if a key misbehaves: `hl.dsp.window.cycle_next("prev")`
 (string passthrough, assumed) and whether `hl.dsp.window.resize({ x = 40, y = 0 })` is a delta or an
 absolute size. Also note `addmaster`/`removemaster`/`swapwithmaster` are `layoutmsg`s that only the

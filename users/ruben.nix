@@ -32,7 +32,6 @@
         nix-index
         nix-tree
         # rustdesk
-        shutter
         speedcrunch
         tree
         vscode
@@ -151,8 +150,7 @@
           # KiCad upstream does not support the GTK Wayland backend. Under Hyprland
           # it lands on wx's EGL/wl_egl canvas path, where zoom/pan stutters and
           # cursor warping (Preferences > Common > "Center and warp cursor on zoom")
-          # silently no-ops. Pin it to XWayland/GLX, which is what awesome uses.
-          # Harmless under awesome, where the GTK backend is x11 already.
+          # silently no-ops. Pin it to XWayland/GLX instead.
           kicad = "GDK_BACKEND=x11 kicad";
           mb = "cd ~/github.com/current-booster/libmodbus-cpp";
           dcdc = "cd ~/github.com/lund-dcdc-kicad";
@@ -161,12 +159,5 @@
           ltr = "l -ltr";
         };
       };
-
-      # Prevent IBus from autostarting in AwesomeWM (it overrides XKB layout switching).
-      # In GNOME, IBus is started by GNOME's own systemd integration, so this has no effect there.
-      xdg.configFile."autostart/ibus-daemon.desktop".text = ''
-        [Desktop Entry]
-        Hidden=true
-      '';
     };
 }
