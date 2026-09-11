@@ -74,6 +74,10 @@
         "--time"
         "--remember"
         "--remember-session"
+        # Echo the password as asterisks instead of showing nothing at all.
+        # tuigreet's default redaction character is already "*"; pass
+        # --asterisks-char to change it.
+        "--asterisks"
         "--sessions ${sessions}/wayland-sessions"
       ];
   };
