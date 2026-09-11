@@ -4,26 +4,39 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-The live NixOS system configuration for a single machine (`/etc/nixos`, hostname `nixos`, x86_64-linux,
-HP ZBook Fury 15.6" G8 / Xeon W-11955M, Intel iGPU + discrete NVIDIA RTX A2000 on PRIME offload). Edits
-here change the machine the agent is running on. There is no test suite; correctness is checked by
-evaluating and building the configuration.
+The NixOS configuration in `/etc/nixos`, for two x86_64-linux machines:
+
+- **`zbook`** — HP ZBook Fury 15.6" G8 / Xeon W-11955M, Intel iGPU + discrete NVIDIA RTX A2000 on PRIME
+  offload. This is the live system the agent runs on, so edits here change the machine under it.
+- **`server`** — local LLM (ollama), VM host (libvirt/KVM), containers, and compiling things. Mainly
+  headless with a monitor attached occasionally. **The hardware does not exist yet**:
+  `hosts/server/hardware-configuration.nix` is a loudly-marked placeholder, to be replaced wholesale by
+  what `nixos-generate-config` writes on the real machine.
+
+There is no test suite; correctness is checked by evaluating and building the configuration — and the
+server config builds fine from the laptop, which is the point of keeping the placeholder evaluable.
 
 ## Commands
 
 ```bash
 # Fast feedback loop — evaluate a single option without building anything.
 # This is the primary way to verify a change; prefer it over a full rebuild.
-nix eval .#nixosConfigurations.nixos.config.services.displayManager.defaultSession
-nix eval --raw .#nixosConfigurations.nixos.config.home-manager.users.ruben.programs.bash.shellAliases.kicad
+nix eval .#nixosConfigurations.zbook.config.services.displayManager.defaultSession
+nix eval --raw .#nixosConfigurations.zbook.config.home-manager.users.ruben.programs.bash.shellAliases.kicad
 
-nixos-rebuild build --flake /etc/nixos#nixos    # build only, no sudo, leaves ./result
-nixos-rebuild dry-build --flake /etc/nixos#nixos
-sudo nixos-rebuild switch --flake /etc/nixos#nixos
+nixos-rebuild build --flake /etc/nixos#zbook    # build only, no sudo, leaves ./result
+nixos-rebuild dry-build --flake /etc/nixos#zbook
+sudo nixos-rebuild switch --flake /etc/nixos#zbook
+
+# The other host builds from here too -- it needs no hardware to evaluate or build.
+nix build .#nixosConfigurations.server.config.system.build.toplevel
 sudo nixos-rebuild switch --rollback
 
-nixfmt --check users/ruben.nix                  # formatter is `pkgs.nixfmt` (RFC style)
-nixfmt users/ruben.nix
+# Always name the host explicitly. A bare `--flake /etc/nixos` resolves the attribute from the running
+# `hostname`, which stays `nixos` until the rename above is actually switched in.
+
+nixfmt --check users/ruben/default.nix          # formatter is `pkgs.nixfmt` (RFC style)
+nixfmt users/ruben/default.nix
 
 nix flake update                                # or: nix flake update nixpkgs
 nix develop                                     # claude-code, nixd, nixfmt; direnv does this automatically
@@ -33,18 +46,59 @@ Custom packages live in `pkgs/` and are exposed through the overlay, not as a fl
 (the "nix build .#example" comment in `pkgs/default.nix` is stale). Build one with:
 
 ```bash
-nix build .#nixosConfigurations.nixos.pkgs.my-saleae-logic-2
+nix build .#nixosConfigurations.zbook.pkgs.my-saleae-logic-2
 ```
 
 ## Architecture
 
-`flake.nix` defines exactly one output that matters: `nixosConfigurations.nixos`, composed from
-`./users`, `./apps`, `./configuration.nix`, plus the home-manager NixOS module with
-`useGlobalPkgs = true` (so home-manager shares the system nixpkgs and system-level overlays).
+`flake.nix` builds every host through one `mkHost` helper, and `nixosConfigurations` is the only output
+that matters. `mkHost "<name>"` composes `./users`, `./hosts/<name>`, the overlays and the home-manager
+NixOS module with `useGlobalPkgs = true` (so home-manager shares the system nixpkgs and system-level
+overlays), and sets `networking.hostName` from the directory name — so a host directory name *is* the
+machine name and the two cannot drift. Adding a host is one new `hosts/<name>/` directory plus one line in
+`nixosConfigurations`.
+
+**Layout.** `hosts/<name>/` holds what is true of exactly one machine, including its own
+`hardware-configuration.nix` — bootloader, `stateVersion`, filesystem-dependent settings, and the
+overrides that make this machine different. `modules/` holds what a host opts into:
+
+- `modules/common/` — wanted on every host: `nix.nix`, `locale.nix`, `networking.nix`, `ssh.nix` and
+  `packages.nix` (the CLI package set), plus polkit and nix-ld in `default.nix`.
+- `modules/desktop/` — one import for the whole graphical stack: `greetd.nix`, `hyprland.nix`,
+  `audio.nix`, `portals.nix`, `fonts.nix`, `apps.nix`.
+- `modules/hardware/` — GPU and firmware. `nvidia-prime.nix` is the only one.
+- `modules/services/` — daemons and timers, imported one by one: `backup.nix`, `builder.nix`,
+  `devices.nix`, `docker.nix`, `llm.nix`, `printing.nix`, `virtualisation.nix`, `caddy.nix`.
+
+`users/`, `pkgs/`, `overlays/` and `config-files/` stay at the top level because they are not per-host.
+
+A module owns the packages its concern needs, so `environment.systemPackages` is defined in six places and
+merged: `btrbk` in `backup.nix`, `hyprland` in `hyprland.nix`, `android-tools` in `devices.nix`, and so
+on. Adding a package means finding the module that owns the concern, not editing one central list.
+
+**What each host actually opts into.** The two differ almost entirely by which modules they import, not by
+overrides:
+
+| | zbook | server |
+| --- | --- | --- |
+| `modules/common` | yes | yes |
+| `modules/desktop` | yes | yes — Hyprland for the occasional monitor |
+| `users/ruben/desktop.nix` | yes | **no** — brave/vscode/kicad and the bench groups stay on the laptop |
+| `modules/hardware/nvidia-prime.nix` | yes | no |
+| `backup`, `devices`, `printing` | yes | no |
+| `docker` | yes | yes |
+| `builder`, `llm`, `virtualisation` | no | yes |
+| sshd started at boot | **no** (`wantedBy = mkForce []`) | yes (stock) |
+| `services.xserver.enable` | `true` (for the NVIDIA kernel modules) | `false` |
+
+That last row is the split working as intended: `xserver.enable` is defined only in the NVIDIA module, so
+a host with no GPU module gets no X server at all, while both still get a console keymap because
+`services.xserver.xkb.*` lives in `modules/common/locale.nix`. Closures come out at 11.27 GiB (zbook) and
+7.40 GiB (server), sharing 1383 of their store paths.
 
 **Overlays** (`overlays/default.nix`) return a list applied in order. Only one is load-bearing now:
 
-- `additions` — imports `pkgs/`, which is why `pkgs.my-saleae-logic-2` resolves in `configuration.nix`.
+- `additions` — imports `pkgs/`, which is why `pkgs.my-saleae-logic-2` resolves in `modules/services/devices.nix`.
 - `modifications` — an empty placeholder. It used to rebuild `awesome` with `gtk3Support = true`.
 
 A third overlay, `patch01`, was a `builtins.fetchGit` of `stefano-m/nix-stefano-m-nix-overlays` pinned by
@@ -52,22 +106,37 @@ rev and outside the flake lock. It existed solely to supply the `extraLuaPackage
 awesome's `luaModules` wanted, and went with awesome. Do not reintroduce it without that need: being
 outside the lock, `nix flake update` never moved it and the rev had to be bumped by hand.
 
-**Per-user config** lives under `users/`. `users/default.nix` imports only `ruben.nix`; `teczito.nix`
-exists but is not imported. Each file defines both the system user and its `home-manager.users.<name>` block.
+**Per-user config** lives under `users/`, split the same way the modules are. `users/ruben/default.nix`
+is the CLI base — the system user, and a `home-manager.users.ruben` block with bash, git, tmux, vim and
+lazygit — and is imported unconditionally by `users/default.nix`. `users/ruben/desktop.nix` is the
+graphical-workstation layer on top: GUI packages, the bench-only groups (`adb`, `dialout`, `input`,
+`nm-openvpn`), the `kicad` alias and the `xpdf` insecure-package allowance. A host that wants it imports
+it; `hosts/zbook/default.nix` does. Both halves define `home-manager.users.ruben`, and the module system
+merges them, so `home.packages`, `extraGroups` and `shellAliases` accumulate across the two files.
 
-**Backups** are a coupled pair that must be edited together: `backup-configurations.nix` writes three btrbk
-configs into `/etc/btrbk/`, and `timer-configuration.nix` defines the systemd timers/services that invoke
-btrbk against those exact paths. Renaming a config file there breaks the units here.
+`home.stateVersion` deliberately does *not* live in either: like `system.stateVersion` it is a per-machine
+compatibility marker, so the host sets it. `users/teczito.nix` exists but is not imported.
 
-`apps/` currently imports nothing — `apps/caddy.nix` is complete but commented out in `apps/default.nix`.
+**Backups** are mechanism and policy, in two files. `modules/services/backup.nix` declares
+`local.btrbk.jobs`, an `attrsOf submodule` where each entry generates all three pieces from one name:
+`/etc/btrbk/btrbk-<name>.conf` from its `settings`, a oneshot `<name>.service` running btrbk against that
+exact path, and a `<name>.timer` from `onBootSec`/`onUnitActiveSec` (null means run once per boot).
+`hosts/zbook/backup-jobs.nix` is the policy — which subvolumes, how often, how much history.
+
+This replaced two files that had to be edited together, where the config path was written in one and named
+again in the other, so renaming a config silently orphaned its unit. That failure mode is now unreachable:
+the name is written once.
+
+`modules/services/caddy.nix` is complete but imported by nobody. It used to live in `apps/`, whose
+`default.nix` was an empty import list; that directory is gone.
 
 ## Gotchas
 
-**`hardware-configuration.nix` is hand-edited despite its "Do not modify this file!" banner.** It carries
+**`hosts/zbook/hardware-configuration.nix` is hand-edited despite its "Do not modify this file!" banner.** It carries
 the GPU/graphics settings, `hardware.bluetooth.enable`, and the extra btrfs mounts. Never regenerate it
 with `nixos-generate-config`; that would silently drop all of it.
 
-**Both GPUs are live, as PRIME render offload.** All graphics config is in `nvidia-prime.nix`; the
+**Both GPUs are live, as PRIME render offload.** All graphics config is in `modules/hardware/nvidia-prime.nix`; the
 `hardware.nvidiaOptimus.disable` + `bbswitch` setup that used to power the card off is **gone**.
 
 - iGPU `8086:9a70`, Tiger Lake-H **GT1 / 32 EU UHD Graphics** at `PCI:0:2:0`. It owns every display
@@ -119,14 +188,17 @@ its own misleading `wl_display_connect failed (is a wayland compositor running?)
 real cause.
 
 `/dev/dri/cardN` parses fine but the numbering is not stable across boots, so **`/dev/dri/igpu` is a udev
-symlink defined in `nvidia-prime.nix`**, matched on the iGPU's PCI slot rather than on a card number:
+symlink defined in `modules/hardware/nvidia-prime.nix`**, matched on the iGPU's PCI slot rather than on a card number:
 
 ```
 KERNEL=="card*", SUBSYSTEM=="drm", DEVPATH=="*/0000:00:02.0/drm/card*", SYMLINK+="dri/igpu"
 ```
 
-That is a second definition of `services.udev.extraRules` alongside the TI rules in `configuration.nix`;
-the option is `types.lines`, so the two merge rather than collide. Current enumeration, for reference —
+That is a second definition of `services.udev.extraRules` alongside the TI rules in
+`modules/services/devices.nix`; the option is `types.lines`, so the two merge rather than collide. It is
+wrapped in `lib.mkBefore` so this rule lands *above* the TI rules in the generated file: `lines` options
+merge in module order, and module order is NOT the order of a host's `imports` list — splitting these two
+definitions into separate modules silently reversed them until the `mkBefore` was added. Current enumeration, for reference —
 **NVIDIA is `card0`, the iGPU is `card1`** (all four displays hang off `card1`), the opposite of what
 earlier revisions of this file claimed:
 
@@ -142,8 +214,8 @@ than the old ACPI cut, roughly 1–2 W.
 **Most files in `config-files/` are unmanaged copies, not the deployed config.** Only two are actually
 wired into the build:
 
-- `config-files/vim/.vimrc` → `programs.vim.extraConfig` in `users/ruben.nix`
-- `config-files/ti/71-ti-permissions.rules` → `services.udev.extraRules` in `configuration.nix`
+- `config-files/vim/.vimrc` → `programs.vim.extraConfig` in `users/ruben/default.nix`
+- `config-files/ti/71-ti-permissions.rules` → `services.udev.extraRules` in `modules/services/devices.nix`
 
 `config-files/hypr/`, `waybar/`, `walker/`, `kitty/`, and `uwsm/` are the live
 config. Each `~/.config/<name>` is a **directory symlink** pointing at the repo:
@@ -169,7 +241,7 @@ to. Any editor or tool is safe. To wire up a new one, `ln -s /etc/nixos/config-f
 schema). Two things about it are easy to get wrong. walker is only a frontend: with no `elephant` daemon
 on `$XDG_RUNTIME_DIR/elephant/elephant.sock` it starts, fails to connect and exits without mapping a
 surface, so a bind firing `walker` looks like a broken keybind — `services.elephant.enable` in
-`configuration.nix` is what prevents that. And an unrecognised key in `config.toml` is *silently dropped*
+`services.elephant.enable` in `modules/desktop/hyprland.nix` is what prevents that. And an unrecognised key in `config.toml` is *silently dropped*
 (`Walker::new` logs the deserialize error and carries on with defaults), which is why the stale 0.13 file
 sat here for months looking fine while doing nothing. Both theme files carry their own re-derive command
 against `pkgs.walker.src`; run those after a walker update rather than editing them blind.
@@ -179,12 +251,30 @@ against `pkgs.walker.src`; run those after a walker update rather than editing t
 `config-files/ti/` have no `~/.config` counterpart by design; they are the two wired into the build above.
 A rebuild never deploys any of these.
 
+**`programs.git` in home-manager generates `~/.config/git/config`, and it is the only git config now.**
+For a long time the block read `programs.git.settings = { enable = true; ... }` —
+`enable` one level too deep, so `programs.git.enable` was false and no config was written at all. Two
+things were wrong under it as well: `settings` is the renamed `extraConfig`, i.e. the gitconfig itself, so
+its keys are git *sections*; and `userName`, `userEmail` and `aliases` were home-manager option names with
+their own renames to `user.name`, `user.email` and `alias`. All three are fixed.
+
+The hand-written `~/.gitconfig` that predated it has been folded in and moved aside to
+`~/.gitconfig.replaced-by-home-manager`. It contributed `core.whitespace = cr-at-eol` and two
+`safe.directory` entries; both of those are inert as things stand — `/etc/nixos` is owned by `ruben:users`
+so git needs no exception for it, and `/home/ci/zt600-firmware` does not exist — but they were carried
+over rather than dropped.
+
+Note the ordering hazard this creates: home-manager only writes `~/.config/git/config` on a **switch**, so
+between moving the old file aside and the next `nixos-rebuild switch` there is no global git config at all
+and commits fail with "Author identity unknown". Switch, or move the file back.
+
 **Hyprland is the only session.** GNOME and awesome both used to be installed alongside it on X11; both
 are gone, so `defaultSession` is `hyprland-uwsm` and `wayland-sessions/` holds the only entries the
 greeter offers. There is no X11 session left, and therefore no non-Wayland fallback if the compositor
 will not start — the rescue path is the TTY and ssh, below.
 
-`services.xserver.enable` is nevertheless still `true`, and must stay that way. It no longer has anything
+`services.xserver.enable` is nevertheless still `true`, and must stay that way. It lives in
+`modules/hardware/nvidia-prime.nix` rather than in any desktop module, because it no longer has anything
 to do with running an X session: `nixos/modules/hardware/video/nvidia.nix` gates
 `boot.kernelModules = [ "nvidia" "nvidia_modeset" "nvidia_drm" ]` on it, so turning it off stops the
 driver's kernel modules loading at boot and breaks PRIME offload. `services.xserver.videoDrivers` is read
@@ -222,7 +312,7 @@ The accepted keys are in the binary's own error strings instead.
 `which Hyprland` is a setuid wrapper you cannot read, so go through the store path:
 
 ```bash
-strings "$(nix eval --raw /etc/nixos#nixosConfigurations.nixos.config.programs.hyprland.package)/bin/.Hyprland-wrapped" \
+strings "$(nix eval --raw /etc/nixos#nixosConfigurations.zbook.config.programs.hyprland.package)/bin/.Hyprland-wrapped" \
   | grep -E '^hl\.[a-z_.]+:'
 ```
 
@@ -360,8 +450,9 @@ complete journal despite feeling like a forced power-off. Start sshd first (belo
 in. `kernel.sysrq` is `16` (sync only), so `Alt+SysRq+S` flushes but REISUB does not work unless you raise
 it to `1`.
 
-**sshd is installed but deliberately not started at boot.** `configuration.nix` sets
-`services.openssh.enable = true` and then `systemd.services.sshd.wantedBy = lib.mkForce [ ]`, so the unit
+**sshd is installed but deliberately not started at boot.** `modules/common/ssh.nix` sets
+`services.openssh.enable = true`, and `hosts/zbook/default.nix` then sets
+`systemd.services.sshd.wantedBy = lib.mkForce [ ]`, so the unit
 exists, reads as `linked`, and sits `inactive` with nothing listening on 22. That is intentional — it is
 started on demand with `sudo systemctl start sshd`. Do not "fix" the inactive unit. Starting it *before*
 reproducing a compositor freeze is worth doing anyway: it gives you a second machine to debug from.
@@ -551,7 +642,7 @@ Both claims are wrong, and believing them costs a working session:
 directly — `strings` on it contains no `uwsm` at all, only `fork`/`waitpid`/`prctl`/`execvp`:
 
 ```bash
-strings "$(nix eval --raw /etc/nixos#nixosConfigurations.nixos.config.programs.hyprland.package)/bin/start-hyprland" | grep -ci uwsm   # 0
+strings "$(nix eval --raw /etc/nixos#nixosConfigurations.zbook.config.programs.hyprland.package)/bin/start-hyprland" | grep -ci uwsm   # 0
 ```
 
 `programs.hyprland.withUWSM` does **not** change this — it only sets `programs.uwsm.enable`, while the
@@ -579,7 +670,7 @@ parent), and with `journalctl -b | grep -c uwsm` (zero for a whole boot means th
 journal identifier differs too: uwsm sessions log as `uwsm_hyprland.desktop`, which is what every log-reading
 recipe in this file assumes.
 
-`services.greetd` in `configuration.nix` therefore does not hand tuigreet
+`services.greetd` in `modules/desktop/greetd.nix` therefore does not hand tuigreet
 `displayManager.sessionData.desktops` directly. It passes a filtered copy — a `runCommand` that deletes
 `wayland-sessions/hyprland.desktop` — so the trap entry cannot be selected at all. lightdm hid the problem
 only because it happened to be pointed at the uwsm entry; tuigreet lists whatever is in the directory and

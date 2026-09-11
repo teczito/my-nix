@@ -1,9 +1,14 @@
-{ pkgs, ... }:
+{ ... }:
 
+# What this laptop backs up. The machinery is in
+# ../../modules/services/backup.nix; this is policy: which subvolumes, how
+# often, and how much history to keep.
 {
-  environment.etc = {
-    "btrbk/btrbk-snapshots-home.conf" = {
-      text = ''
+  local.btrbk.jobs = {
+    snapshots-home = {
+      onBootSec = "5m";
+      onUnitActiveSec = "1h";
+      settings = ''
         archive_exclude nixos-root
         archive_exclude nixos-nix
 
@@ -14,13 +19,11 @@
         snapshot_dir /mnt/btr_pool/btrbk_snapshots
         subvolume    /mnt/btr_pool/nixos-home
       '';
-
-      # The UNIX file mode bits
-      mode = "0550";
     };
 
-    "btrbk/btrbk-snapshots-root.conf" = {
-      text = ''
+    snapshots-root = {
+      onBootSec = "10m";
+      settings = ''
         archive_exclude nixos-home
         archive_exclude nixos-nix
 
@@ -31,13 +34,12 @@
         snapshot_dir /mnt/btr_pool/btrbk_snapshots
         subvolume    /mnt/btr_pool/nixos-root
       '';
-
-      # The UNIX file mode bits
-      mode = "0550";
     };
 
-    "btrbk/btrbk-backup-to-ssd.conf" = {
-      text = ''
+    backup-to-ssd = {
+      onBootSec = "20m";
+      onUnitActiveSec = "1h";
+      settings = ''
         archive_exclude nixos-root
         archive_exclude nixos-nix
 
@@ -52,9 +54,6 @@
           target /mnt/backup_ssd
           subvolume nixos-home
       '';
-
-      # The UNIX file mode bits
-      mode = "0550";
     };
   };
 }

@@ -1,8 +1,14 @@
-{ pkgs, lib, config, ... }:
+{
+  pkgs,
+  lib,
+  config,
+  ...
+}:
 let
   app = "caddyphp";
   dataDir = "/var/www/";
-in {
+in
+{
 
   services.phpfpm.pools.${app} = {
     user = app;

@@ -1,4 +1,9 @@
-{ config, pkgs, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 
 # Discrete NVIDIA RTX A2000 Mobile (GA107GLM, Ampere) on PCI:1:0:0, run as a
 # PRIME render-offload sink behind the Tiger Lake-H iGPU on PCI:0:2:0.
@@ -8,6 +13,22 @@
 # at which point it wakes, renders, and hands the result back to the iGPU.
 # This replaces the old `hardware.nvidiaOptimus.disable` + bbswitch setup.
 {
+  # services.xserver.enable is here, not with any desktop module, because it is
+  # not about running an X session -- there is none. The NVIDIA module gates
+  #   boot.kernelModules = [ "nvidia" "nvidia_modeset" "nvidia_drm" ]
+  # on it (nixos/modules/hardware/video/nvidia.nix), so with it off the
+  # driver's kernel modules never load at boot and PRIME offload breaks.
+  services.xserver.enable = true;
+
+  # Only "nvidia" belongs here. The PRIME module below adds its own
+  # "modesetting" entry carrying `BusID "PCI:0:2:0"`; listing "modesetting"
+  # here as well emits a second, BusID-less
+  # Device-modesetting[0]/Screen-modesetting[0] pair into xorg.conf.
+  # Note this list is read independently of services.xserver.enable
+  # (`lib.elem "nvidia" config.services.xserver.videoDrivers`), so it is the
+  # list, not the flag, that turns the driver on.
+  services.xserver.videoDrivers = [ "nvidia" ];
+
   hardware.graphics.enable = true;
 
   # VAAPI for the iGPU, which still drives all output. (The old
@@ -60,7 +81,10 @@
   #
   # services.udev.extraRules is a `lines` option, so this definition merges
   # with the one in configuration.nix rather than colliding with it.
-  services.udev.extraRules = ''
+  # mkBefore, not bare assignment: `lines` options merge in module order, which
+  # is not the order of a host's imports list and is not worth depending on.
+  # This pins the iGPU symlink above the TI rules in the generated file.
+  services.udev.extraRules = lib.mkBefore ''
     KERNEL=="card*", SUBSYSTEM=="drm", DEVPATH=="*/0000:00:02.0/drm/card*", SYMLINK+="dri/igpu"
   '';
 }

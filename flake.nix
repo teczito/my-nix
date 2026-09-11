@@ -31,6 +31,36 @@
         config.allowUnfree = true;
         overlays = [ nixd.overlays.default ];
       };
+
+      # One host per directory under ./hosts. The host's own default.nix is the
+      # only place that decides what that machine is; everything it opts into
+      # lives in ./modules and ./users and is imported from there.
+      mkHost =
+        hostName:
+        nixpkgs.lib.nixosSystem {
+          inherit system;
+          # modules to use
+          modules = [
+            { networking.hostName = hostName; }
+
+            (
+              { config, pkgs, ... }:
+              {
+                nixpkgs.overlays = import ./overlays { inherit inputs; };
+              }
+            )
+
+            ./users
+            ./hosts/${hostName}
+
+            home-manager.nixosModules.home-manager # make home manager available to the host config
+            {
+              # use system-level nixpkgs rather than the HM private ones
+              # "This saves an extra Nixpkgs evaluation, adds consistency, and removes the dependency on NIX_PATH, which is otherwise used for importing Nixpkgs."
+              home-manager.useGlobalPkgs = true;
+            }
+          ];
+        };
     in
     {
       # `nix develop` / `nix develop /etc/nixos`
@@ -45,34 +75,9 @@
         ];
       };
 
-      # define a "nixos" build
-      nixosConfigurations.nixos = nixpkgs.lib.nixosSystem {
-        inherit system;
-        # modules to use
-        modules = [
-          (
-            { config, pkgs, ... }:
-            {
-              nixpkgs.overlays = import ./overlays { inherit inputs; };
-            }
-          )
-
-          ./users
-          ./apps
-          ./configuration.nix # our previous config file
-
-          {
-            nixpkgs.overlays = [ nixd.overlays.default ];
-            environment.systemPackages = with nixpkgs; [ nixd ];
-          }
-
-          home-manager.nixosModules.home-manager # make home manager available to configuration.nix
-          {
-            # use system-level nixpkgs rather than the HM private ones
-            # "This saves an extra Nixpkgs evaluation, adds consistency, and removes the dependency on NIX_PATH, which is otherwise used for importing Nixpkgs."
-            home-manager.useGlobalPkgs = true;
-          }
-        ];
+      nixosConfigurations = {
+        zbook = mkHost "zbook";
+        server = mkHost "server";
       };
     };
 }

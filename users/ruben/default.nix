@@ -5,12 +5,8 @@
     isNormalUser = true;
     description = "Ruben";
     extraGroups = [
-      "adb"
-      "dialout"
       "docker"
-      "input"
       "networkmanager"
-      "nm-openvpn"
       "wheel"
     ];
   };
@@ -18,24 +14,16 @@
   home-manager.users.ruben =
     { pkgs, config, ... }:
     {
-      home.stateVersion = "23.05";
+      # The CLI base, wanted on every machine. GUI apps and bench tools are in
+      # ./desktop.nix.
       home.packages = with pkgs; [
         bat
-        brave
         cntr
         direnv
-        # freecad
-        git-cola
         htop
-        iw
-        minicom
         nix-index
         nix-tree
-        # rustdesk
-        speedcrunch
         tree
-        vscode
-        xpdf
       ];
 
       programs.tmux = {
@@ -69,34 +57,58 @@
 
       programs.vim = {
         enable = true;
-        extraConfig = import ../config-files/vim/.vimrc;
+        extraConfig = import ../../config-files/vim/.vimrc;
       };
 
       programs.lazygit = {
         enable = true;
       };
 
-      programs.git.settings = {
+      # `enable` belongs to programs.git, not inside settings. It sat one level
+      # too deep here for a long time, which left programs.git.enable false and
+      # meant no git config was ever generated.
+      programs.git = {
         enable = true;
-        userName = "Ruben de Schipper";
-        userEmail = "rubendeschipper@gmail.com";
-        aliases = {
-          lg = "log --oneline";
-        };
-        core = {
-          editor = "vim";
-        };
-        color = {
-          ui = true;
-        };
-        push = {
-          default = "simple";
-        };
-        pull = {
-          ff = "only";
-        };
-        init = {
-          defaultBranch = "main";
+        settings = {
+          # `settings` is the gitconfig itself (it is the renamed `extraConfig`),
+          # so these are real git sections. The flat `userName` / `userEmail` /
+          # `aliases` that used to be here were home-manager option names, not
+          # git ones, and have their own renames: user.name, user.email, alias.
+          user = {
+            name = "Ruben de Schipper";
+            email = "rubendeschipper@gmail.com";
+          };
+          alias = {
+            lg = "log --oneline";
+          };
+          core = {
+            editor = "vim";
+            whitespace = "cr-at-eol";
+          };
+
+          # Moved out of a hand-written ~/.gitconfig. Both entries are inert as
+          # things stand -- /etc/nixos is owned by ruben:users, so git needs no
+          # exception for it, and /home/ci/zt600-firmware does not exist -- but
+          # they cost nothing and cover the case where a repo is checked out
+          # under another owner.
+          safe = {
+            directory = [
+              "/etc/nixos"
+              "/home/ci/zt600-firmware"
+            ];
+          };
+          color = {
+            ui = true;
+          };
+          push = {
+            default = "simple";
+          };
+          pull = {
+            ff = "only";
+          };
+          init = {
+            defaultBranch = "main";
+          };
         };
       };
 
@@ -147,11 +159,6 @@
           eval "$(direnv hook bash)"
         '';
         shellAliases = {
-          # KiCad upstream does not support the GTK Wayland backend. Under Hyprland
-          # it lands on wx's EGL/wl_egl canvas path, where zoom/pan stutters and
-          # cursor warping (Preferences > Common > "Center and warp cursor on zoom")
-          # silently no-ops. Pin it to XWayland/GLX instead.
-          kicad = "GDK_BACKEND=x11 kicad";
           mb = "cd ~/github.com/current-booster/libmodbus-cpp";
           dcdc = "cd ~/github.com/lund-dcdc-kicad";
           zt600-ctrl = "cd ~/github.com/zt600-control";
