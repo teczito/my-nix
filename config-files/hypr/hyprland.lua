@@ -52,9 +52,9 @@ hl.config({
 -- load-bearing, not tidiness: the runtime hl.monitor() call below re-creates the
 -- outputs (their monitor IDs visibly shift), and on re-creation "preferred"
 -- re-resolved to 1920x1080 and stayed there. An explicit mode survives it.
-hl.monitor({ output = "desc:Iiyama North America PL2796QS 1179911801568", mode = "2560x1440@59.951", position = "0x0",    scale = 1 })
-hl.monitor({ output = "desc:Iiyama North America PL2792Q 1226151422212",  mode = "2560x1440@59.951", position = "2560x0", scale = 1 })
-hl.monitor({ output = "desc:Iiyama North America PL2796QS 1179915302805", mode = "2560x1440@59.951", position = "5120x0", scale = 1 })
+hl.monitor({ output = "desc:iiyama Corporation PL2796QS 1179911801568", mode = "2560x1440@59.951", position = "0x0",    scale = 1 })
+hl.monitor({ output = "desc:iiyama Corporation PL2792Q 1226151422212",  mode = "2560x1440@59.951", position = "2560x0", scale = 1 })
+hl.monitor({ output = "desc:iiyama Corporation PL2796QS 1179915302805", mode = "2560x1440@59.951", position = "5120x0", scale = 1 })
 hl.monitor({ output = "",                                                mode = "preferred", position = "auto",   scale = 1 })
 
 -- The laptop panel is switched off, but only for as long as at least one
@@ -117,9 +117,9 @@ end)
 
 -- Workspaces 1-3 run left to right across the three monitors, so 2 is the
 -- main one. 4-10 have no rule and open wherever focus happens to be.
-hl.workspace_rule({ workspace = "1", monitor = "desc:Iiyama North America PL2796QS 1179911801568", default = true })
-hl.workspace_rule({ workspace = "2", monitor = "desc:Iiyama North America PL2792Q 1226151422212",  default = true })
-hl.workspace_rule({ workspace = "3", monitor = "desc:Iiyama North America PL2796QS 1179915302805", default = true })
+hl.workspace_rule({ workspace = "1", monitor = "desc:iiyama Corporation PL2796QS 1179911801568", default = true })
+hl.workspace_rule({ workspace = "2", monitor = "desc:iiyama Corporation PL2792Q 1226151422212",  default = true })
+hl.workspace_rule({ workspace = "3", monitor = "desc:iiyama Corporation PL2796QS 1179915302805", default = true })
 
 
 ---------------------
