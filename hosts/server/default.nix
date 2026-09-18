@@ -17,8 +17,10 @@
     # when someone logs in at an attached monitor.
     #
     # users/ruben/desktop.nix is deliberately NOT imported -- that layer is
-    # brave, vscode, kicad and the bench groups, which belong on the laptop.
-    # Add it here if this machine ever becomes somewhere you sit.
+    # vscode, kicad and the bench groups, which belong on the laptop. Brave and
+    # thunar are not in that layer: both come with ../../modules/desktop, so the
+    # occasional monitor gets a browser and a file manager. Add desktop.nix here
+    # if this machine ever becomes somewhere you sit.
     ../../modules/desktop
 
     ../../modules/services/builder.nix

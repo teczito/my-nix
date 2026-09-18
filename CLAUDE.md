@@ -83,7 +83,7 @@ overrides:
 | --- | --- | --- |
 | `modules/common` | yes | yes |
 | `modules/desktop` | yes | yes — Hyprland for the occasional monitor |
-| `users/ruben/desktop.nix` | yes | **no** — brave/vscode/kicad and the bench groups stay on the laptop |
+| `users/ruben/desktop.nix` | yes | **no** — vscode/kicad and the bench groups stay on the laptop |
 | `modules/hardware/nvidia-prime.nix` | yes | no |
 | `backup`, `devices`, `printing` | yes | no |
 | `docker` | yes | yes |

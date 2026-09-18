@@ -123,7 +123,7 @@
             export GIT_PS1_SHOWCOLORHINTS=1
             export GIT_PS1_SHOWUPSTREAM=1
             export PROMPT_DIRTRIM=2
-            export PROMPT_COMMAND=' __git_ps1 "\[\033[1;32m\][shlvl-''${SHLVL}\[\e]0;@\w: \w\a\]@\w]\[\033[0m\]" "\\\$\\[\\033[0m\\] "'
+            export PROMPT_COMMAND=' __git_ps1 "\[\033[1;32m\][shlvl-''${SHLVL} \h\[\e]0;\h@\w: \w\a\]@\w]\[\033[0m\]" "\\\$\\[\\033[0m\\] "'
           fi
 
           nixify() {

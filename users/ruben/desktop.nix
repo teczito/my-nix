@@ -22,7 +22,6 @@
     { pkgs, ... }:
     {
       home.packages = with pkgs; [
-        brave
         # freecad
         git-cola
         iw
