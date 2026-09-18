@@ -20,4 +20,15 @@
 # This has to live here rather than as an `env =` line in hyprland.conf: under
 # uwsm the compositor's own config is not read until Hyprland is already up,
 # which is too late to influence device selection.
-export AQ_DRM_DEVICES=/dev/dri/igpu
+#
+# Guarded, because ~/.config/uwsm is the same symlink into this repo on every
+# host, while /dev/dri/igpu is created by the udev rule in
+# modules/hardware/nvidia-prime.nix -- which hosts/zbook imports and
+# hosts/server does not. Exporting the name on a host without that rule points
+# aquamarine at a path that is not there: it finds no GPU and aborts with
+# "CBackend::create() failed!", which from the greeter is indistinguishable
+# from the login itself failing. A single-GPU host needs no pin at all, so
+# leave the variable unset there and let aquamarine pick the only card.
+if [ -e /dev/dri/igpu ]; then
+    export AQ_DRM_DEVICES=/dev/dri/igpu
+fi

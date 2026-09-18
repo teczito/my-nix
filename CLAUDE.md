@@ -168,6 +168,15 @@ Because the NVIDIA card now exposes its own DRM node, Hyprland is pinned to the 
 launching the compositor, whereas `hyprland.lua` is not read until Hyprland is already up — too late to
 influence which DRM device aquamarine opens.
 
+**The export is guarded by `[ -e /dev/dri/igpu ]`.** `~/.config/uwsm` is the same symlink into this repo
+on every host, but the `/dev/dri/igpu` alias is created by the udev rule in
+`modules/hardware/nvidia-prime.nix`, which `hosts/zbook` imports and `hosts/server` does not. An
+unconditional export therefore points aquamarine at a path that is not there on the server: it finds no
+GPU and aborts with `CBackend::create() failed!` — from the greeter, indistinguishable from the login
+itself failing. That is exactly what happened on 2026-09-18, the first time `~/.config/uwsm` was linked
+on the server. A single-GPU host needs no pin at all, so leaving the variable unset there is the correct
+outcome rather than a fallback. Anything else added to this file is host-shared the same way.
+
 **`AQ_DRM_DEVICES` is a colon-separated list, like `PATH`.** This rules out the `by-path` name that looks
 like the obvious stable choice: `/dev/dri/by-path/pci-0000:00:02.0-card` contains two colons of its own,
 so aquamarine splits it into three nonexistent paths and logs
