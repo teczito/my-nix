@@ -1,4 +1,5 @@
 .direnv/
+.claude/
 
 .envrc
 nixos.qcow2

@@ -18,4 +18,6 @@
   # interpreter and libraries. Useful anywhere software gets built or run.
   programs.nix-ld.enable = true;
   programs.nix-ld.libraries = [ ];
+
+  services.udisks2.enable = true;
 }

@@ -4,7 +4,7 @@
 # NOTE: the hardware does not exist yet. ./hardware-configuration.nix is a
 # placeholder and everything marked "placeholder" below is a guess that the real
 # machine gets to overrule.
-{ ... }:
+{ pkgs, ... }:
 
 {
   imports = [
@@ -32,6 +32,12 @@
   boot.loader.efi.canTouchEfiVariables = true;
   # Headless: do not sit in a menu nobody is watching. (The zbook uses 300.)
   boot.loader.timeout = 5;
+
+  # Kernel version, as on the zbook. Worth keeping at 7.2+: nixos-generate-config
+  # was run from the 7.x installer, and nixpkgs only adds the AMD 800-series USB
+  # driver (xhci_pci_prom21) to the default initrd set on 7.2+. On the 6.18
+  # default that module does not exist at all and the initrd build fails.
+  boot.kernelPackages = pkgs.linuxPackages_latest;
 
   # sshd is deliberately NOT disabled here. modules/common/ssh.nix enables the
   # unit and the stock wantedBy starts it at boot, which is the whole point of a
