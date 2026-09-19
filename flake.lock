@@ -18,6 +18,27 @@
         "type": "github"
       }
     },
+    "flake-utils": {
+      "inputs": {
+        "systems": [
+          "meal-planner",
+          "systems"
+        ]
+      },
+      "locked": {
+        "lastModified": 1731533236,
+        "narHash": "sha256-l0KFg5HjrsfsO/JpG+r7fRrqm12kzFHyUHqHCVpMMbI=",
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "rev": "11707dc2f618dd54ca8739b309ec4fc024de578b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "type": "github"
+      }
+    },
     "home-manager": {
       "inputs": {
         "nixpkgs": [
@@ -36,6 +57,28 @@
         "owner": "nix-community",
         "repo": "home-manager",
         "type": "github"
+      }
+    },
+    "meal-planner": {
+      "inputs": {
+        "flake-utils": "flake-utils",
+        "nixpkgs": [
+          "nixpkgs"
+        ],
+        "systems": "systems"
+      },
+      "locked": {
+        "lastModified": 1789818543,
+        "narHash": "sha256-UCrlGSD/QYCFFiYu584HqfWrsWsKEBHxrS5liRg11nA=",
+        "ref": "refs/heads/main",
+        "rev": "7ed2d4c014c2d937a55259c5c0514f8b8b3dac57",
+        "revCount": 9,
+        "type": "git",
+        "url": "ssh://git@github.com/teczito/meal-planner"
+      },
+      "original": {
+        "type": "git",
+        "url": "ssh://git@github.com/teczito/meal-planner"
       }
     },
     "nixd": {
@@ -105,8 +148,24 @@
     "root": {
       "inputs": {
         "home-manager": "home-manager",
+        "meal-planner": "meal-planner",
         "nixd": "nixd",
         "nixpkgs": "nixpkgs_2"
+      }
+    },
+    "systems": {
+      "locked": {
+        "lastModified": 1681028828,
+        "narHash": "sha256-Vy1rq5AaRuLzOxct8nz4T6wlgyUR7zLU309k9mBC768=",
+        "owner": "nix-systems",
+        "repo": "default",
+        "rev": "da67096a3b9bf56a91d16901293e51ba5b49a27e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-systems",
+        "repo": "default",
+        "type": "github"
       }
     },
     "treefmt-nix": {

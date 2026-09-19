@@ -26,6 +26,10 @@
     ../../modules/services/builder.nix
     ../../modules/services/docker.nix
     ../../modules/services/llm.nix
+    # The family meal planner. It belongs on this machine rather than the
+    # laptop because it has to answer a phone at seven in the morning, and
+    # because its daily check needs a route to this LAN.
+    ../../modules/services/meal-planner.nix
     ../../modules/services/virtualisation.nix
   ];
 

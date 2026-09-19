@@ -9,6 +9,11 @@
     # home-manager stuff
     home-manager.url = "github:nix-community/home-manager";
 
+    # the family meal planner. Private repo, so ssh rather than github: --
+    # nix fetches it with the same key this machine already clones it with.
+    meal-planner.url = "git+ssh://git@github.com/teczito/meal-planner";
+    meal-planner.inputs.nixpkgs.follows = "nixpkgs";
+
     # use the version of nixpkgs we specified above rather than the one HM would ordinarily use
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
   };
@@ -39,6 +44,10 @@
         hostName:
         nixpkgs.lib.nixosSystem {
           inherit system;
+          # Flake inputs reach the host's modules through here, so a module
+          # file can import what an input provides -- see
+          # modules/services/meal-planner.nix.
+          specialArgs = { inherit inputs; };
           # modules to use
           modules = [
             { networking.hostName = hostName; }
