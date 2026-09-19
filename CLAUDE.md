@@ -250,15 +250,67 @@ to. Any editor or tool is safe. To wire up a new one, `ln -s /etc/nixos/config-f
 schema). Two things about it are easy to get wrong. walker is only a frontend: with no `elephant` daemon
 on `$XDG_RUNTIME_DIR/elephant/elephant.sock` it starts, fails to connect and exits without mapping a
 surface, so a bind firing `walker` looks like a broken keybind — `services.elephant.enable` in
-`services.elephant.enable` in `modules/desktop/hyprland.nix` is what prevents that. And an unrecognised key in `config.toml` is *silently dropped*
-(`Walker::new` logs the deserialize error and carries on with defaults), which is why the stale 0.13 file
-sat here for months looking fine while doing nothing. Both theme files carry their own re-derive command
-against `pkgs.walker.src`; run those after a walker update rather than editing them blind.
+`modules/desktop/hyprland.nix` is what prevents that. And an unrecognised key in `config.toml` is
+*silently dropped* (`Walker::new` logs the deserialize error and carries on with defaults), which is why
+the stale 0.13 file sat here for months looking fine while doing nothing. Both theme files carry their own
+re-derive command against `pkgs.walker.src`; run those after a walker update rather than editing them
+blind.
 
 `config-files/mc/` is an ordinary directory, not linked — `~/.config/mc/` exists separately and holds only
 `ini`/`panels.ini`, so `config-files/mc/mc.keymap` has no live counterpart at all. `config-files/vim/` and
 `config-files/ti/` have no `~/.config` counterpart by design; they are the two wired into the build above.
 A rebuild never deploys any of these.
+
+**elephant needs a PATH the stock NixOS unit does not give it, or the launcher lists every application
+and starts none of them.** elephant activates a `.desktop` entry by handing its `Exec` line to `sh -c`,
+so launching anything needs a shell *and* the session's bin directories. The unit had neither, and
+`Mod+P` → any application did nothing at all. Fixed 2026-09-19 in `modules/desktop/hyprland.nix`:
+
+```nix
+systemd.user.services.elephant.environment.PATH = lib.mkForce null;
+```
+
+NixOS gives every systemd service a default `path` of coreutils/findutils/gnugrep/gnused/systemd and
+writes it into the unit as an explicit `Environment=PATH=...`. That override **replaces** the PATH the
+user manager would otherwise pass down, which is the whole bug: elephant inherits `XDG_DATA_DIRS`
+covering the full session, so walker lists every application, while its PATH holds no `sh` and none of
+the binaries. Setting `PATH` to null drops the `Environment=PATH=` line entirely and elephant falls back
+to the manager's own PATH — `/run/wrappers/bin` plus the per-user and system profiles, i.e. what an app
+started from a terminal gets. elephant's own wrapper prefixes (fd, libqalculate, wl-clipboard, …) are
+unaffected; the wrapper prepends them to whatever it inherits.
+
+**Do not "fix" this by adding `pkgs.bash` to `path` instead.** That satisfies `sh -c` and moves the
+failure one level deeper, to `thunar: command not found`, because **23 of the 27** entries on this host
+spell `Exec` as a bare command name (`thunar %U`, `kitty`, `code`, `nm-connection-editor`, …) rather
+than an absolute store path. Count them before assuming a shell is enough — the inner `grep -m1` matters,
+since `thunar.desktop` and several others carry further `Exec` lines for their desktop *actions*, which
+are not launcher entries of their own and inflate the count to a tidy-looking 27 of 27:
+
+```bash
+for d in $(tr '\0' '\n' < /proc/$(systemctl --user show -p MainPID --value elephant.service)/environ \
+             | grep '^XDG_DATA_DIRS=' | cut -d= -f2- | tr ':' ' '); do
+  for f in "$d"/applications/*.desktop; do [ -e "$f" ] && grep -m1 '^Exec=' "$f"; done
+done | sed 's/^Exec=//' | awk '{print $1}' | awk '{t++} !/^\//{b++} END{print b" bare of "t}'
+```
+
+The failure is invisible from the frontend — walker simply closes, exactly as if the keybind were broken,
+which sends you to `hyprland.lua` and the `config.toml` above rather than to the daemon. **The daemon log
+is the only place the real error appears**, so check it first whenever an entry does not start:
+
+```bash
+journalctl --user -u elephant -b | grep -i error
+# ERROR desktopapplications activate=thunar.desktop
+#   error="exec: \"sh\": executable file not found in $PATH"
+```
+
+The general shape is worth remembering for any user unit that launches user-chosen programs: a mismatch
+between `XDG_DATA_DIRS` (inherited, full) and `PATH` (overridden, minimal) presents as "it can see
+everything and run nothing". Compare the two directly on the running process:
+
+```bash
+tr '\0' '\n' < /proc/$(systemctl --user show -p MainPID --value elephant.service)/environ \
+  | grep -E '^(PATH|XDG_DATA_DIRS)='
+```
 
 **`programs.git` in home-manager generates `~/.config/git/config`, and it is the only git config now.**
 For a long time the block read `programs.git.settings = { enable = true; ... }` —
