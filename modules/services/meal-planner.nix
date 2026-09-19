@@ -13,6 +13,8 @@
 
   services.meal-planner = {
     enable = true;
+    deployable = true;
+    domain = "teczito.duckdns.org";
     # The firewall is on and the whole point is that five people reach this
     # from their phones. The module leaves the port shut by default because
     # opening one is a decision about the network; this is that decision.

@@ -68,11 +68,11 @@
         "systems": "systems"
       },
       "locked": {
-        "lastModified": 1789818543,
-        "narHash": "sha256-UCrlGSD/QYCFFiYu584HqfWrsWsKEBHxrS5liRg11nA=",
+        "lastModified": 1789836889,
+        "narHash": "sha256-+zl3xKaPuG/J3j2BT+WgCYws1upOp/Q3orFOrHLDu4Q=",
         "ref": "refs/heads/main",
-        "rev": "7ed2d4c014c2d937a55259c5c0514f8b8b3dac57",
-        "revCount": 9,
+        "rev": "d5a82539f49efdb067a546dbb53c28439c6c950a",
+        "revCount": 13,
         "type": "git",
         "url": "ssh://git@github.com/teczito/meal-planner"
       },
