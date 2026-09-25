@@ -9,12 +9,15 @@ The NixOS configuration in `/etc/nixos`, for two x86_64-linux machines:
 - **`zbook`** — HP ZBook Fury 15.6" G8 / Xeon W-11955M, Intel iGPU + discrete NVIDIA RTX A2000 on PRIME
   offload. This is the live system the agent runs on, so edits here change the machine under it.
 - **`server`** — local LLM (ollama), VM host (libvirt/KVM), containers, and compiling things. Mainly
-  headless with a monitor attached occasionally. **The hardware does not exist yet**:
-  `hosts/server/hardware-configuration.nix` is a loudly-marked placeholder, to be replaced wholesale by
-  what `nixos-generate-config` writes on the real machine.
+  headless with a monitor attached occasionally. AMD, installed and running at **192.168.68.105** on
+  `enp11s0` (DHCP from the router at 192.168.68.1, so it needs a reservation there, since it is the LAN's
+  DNS resolver). Reachable as `ssh 192.168.68.105`. `hosts/server/hardware-configuration.nix` is the
+  real `nixos-generate-config` output. The server has its own clone of this repo in `/etc/nixos`: to
+  deploy, push from here, then on the server `git pull && ./rebuild_switch.sh`, which needs the sudo
+  password there.
 
-There is no test suite; correctness is checked by evaluating and building the configuration — and the
-server config builds fine from the laptop, which is the point of keeping the placeholder evaluable.
+There is no test suite; correctness is checked by evaluating and building the configuration. The server
+config builds fine from the laptop, so build it here before deploying.
 
 ## Commands
 
@@ -28,7 +31,7 @@ nixos-rebuild build --flake /etc/nixos#zbook    # build only, no sudo, leaves ./
 nixos-rebuild dry-build --flake /etc/nixos#zbook
 sudo nixos-rebuild switch --flake /etc/nixos#zbook
 
-# The other host builds from here too -- it needs no hardware to evaluate or build.
+# The other host builds from here too -- build it here before pulling it on the server.
 nix build .#nixosConfigurations.server.config.system.build.toplevel
 sudo nixos-rebuild switch --rollback
 
@@ -68,7 +71,8 @@ overrides that make this machine different. `modules/` holds what a host opts in
   `audio.nix`, `portals.nix`, `fonts.nix`, `apps.nix`.
 - `modules/hardware/` — GPU and firmware. `nvidia-prime.nix` is the only one.
 - `modules/services/` — daemons and timers, imported one by one: `backup.nix`, `builder.nix`,
-  `devices.nix`, `docker.nix`, `llm.nix`, `printing.nix`, `virtualisation.nix`, `caddy.nix`.
+  `devices.nix`, `dns.nix`, `docker.nix`, `llm.nix`, `meal-planner.nix`, `printing.nix`,
+  `virtualisation.nix`, `caddy.nix`.
 
 `users/`, `pkgs/`, `overlays/` and `config-files/` stay at the top level because they are not per-host.
 
@@ -87,7 +91,7 @@ overrides:
 | `modules/hardware/nvidia-prime.nix` | yes | no |
 | `backup`, `devices`, `printing` | yes | no |
 | `docker` | yes | yes |
-| `builder`, `llm`, `virtualisation` | no | yes |
+| `builder`, `dns`, `llm`, `meal-planner`, `virtualisation` | no | yes |
 | sshd started at boot | **no** (`wantedBy = mkForce []`) | yes (stock) |
 | `services.xserver.enable` | `true` (for the NVIDIA kernel modules) | `false` |
 
@@ -128,7 +132,16 @@ again in the other, so renaming a config silently orphaned its unit. That failur
 the name is written once.
 
 `modules/services/caddy.nix` is complete but imported by nobody. It used to live in `apps/`, whose
-`default.nix` was an empty import list; that directory is gone.
+`default.nix` was an empty import list; that directory is gone. Caddy *does* run on the server anyway:
+the meal-planner flake's module enables `services.caddy` for its `teczito.duckdns.org` vhost and opens
+80/443/8080. Check there before assuming Caddy is off.
+
+**DNS on the server** is AdGuard Home, in `modules/services/dns.nix`. It listens on `127.0.0.1` and
+the LAN IP explicitly, never `0.0.0.0`. libvirt's default network runs a dnsmasq on
+`192.168.122.1:53` whenever a VM network is up, and with a wildcard bind whichever of the two starts
+second fails with `address already in use`. Because the settings are declared in Nix, AdGuard skips its
+setup wizard. With no `settings.users` entry its admin UI has no login, which is why the UI is on
+loopback only (`ssh -L 3000:localhost:3000 192.168.68.105`) until a bcrypt user is added.
 
 ## Gotchas
 

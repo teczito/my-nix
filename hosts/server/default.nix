@@ -1,9 +1,7 @@
 # The server: local LLM, VM host, containers, and compiling things. Mainly
 # headless, with a monitor attached occasionally -- hence the desktop import.
-#
-# NOTE: the hardware does not exist yet. ./hardware-configuration.nix is a
-# placeholder and everything marked "placeholder" below is a guess that the real
-# machine gets to overrule.
+# Lives at 192.168.68.105 on the LAN; ./hardware-configuration.nix is the real
+# nixos-generate-config output from the install.
 { pkgs, ... }:
 
 {
@@ -24,6 +22,8 @@
     ../../modules/desktop
 
     ../../modules/services/builder.nix
+    # The LAN's DNS resolver (AdGuard Home).
+    ../../modules/services/dns.nix
     ../../modules/services/docker.nix
     ../../modules/services/llm.nix
     # The family meal planner. It belongs on this machine rather than the
@@ -33,7 +33,6 @@
     ../../modules/services/virtualisation.nix
   ];
 
-  # Placeholder bootloader. The installer decides this for real.
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
   # Headless: do not sit in a menu nobody is watching. (The zbook uses 300.)
@@ -59,8 +58,8 @@
   # For the VM-host role. "docker" is already in the base user module.
   users.users.ruben.extraGroups = [ "libvirtd" ];
 
-  # A fresh install, so these start at the current release rather than at the
-  # laptop's 22.11. The installer's generated value should win if it differs.
+  # Installed fresh on 26.11, so these are that release rather than the
+  # laptop's 22.11. Never bump them.
   system.stateVersion = "26.11";
   home-manager.users.ruben.home.stateVersion = "26.11";
 }
