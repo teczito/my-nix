@@ -16,14 +16,23 @@ in
   services.adguardhome = {
     enable = true;
 
-    # Admin UI on loopback only for now: with settings declared, AdGuard skips
-    # its setup wizard, and with no `users` entry the UI has no login at all.
-    # Reach it with `ssh -L 3000:localhost:3000 192.168.68.105`. Before moving
-    # it onto the LAN, add a bcrypt user under settings.users.
+    # Admin UI on loopback only for now. Reach it with
+    # `ssh -L 3000:localhost:3000 192.168.68.105`.
     host = "127.0.0.1";
     port = 3000;
 
     settings = {
+      # The admin login. With settings declared, AdGuard skips its setup wizard,
+      # so without this entry the UI would have no login at all. The value is a
+      # bcrypt hash (`htpasswd -nB ruben`), never the password; being declared
+      # here, it overrides anything changed in the UI on every start.
+      users = [
+        {
+          name = "ruben";
+          password = "$2y$05$l5DDupy.PGWFqHWdppnuVeJosj/auk0FxTjzMkp..5SOUEW1sQ4Vu";
+        }
+      ];
+
       dns = {
         # Explicit addresses, never 0.0.0.0: libvirt's default network runs its
         # own dnsmasq on 192.168.122.1:53, and a wildcard bind here makes
