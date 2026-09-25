@@ -140,8 +140,10 @@ the meal-planner flake's module enables `services.caddy` for its `teczito.duckdn
 the LAN IP explicitly, never `0.0.0.0`. libvirt's default network runs a dnsmasq on
 `192.168.122.1:53` whenever a VM network is up, and with a wildcard bind whichever of the two starts
 second fails with `address already in use`. Because the settings are declared in Nix, AdGuard skips its
-setup wizard. With no `settings.users` entry its admin UI has no login, which is why the UI is on
-loopback only (`ssh -L 3000:localhost:3000 192.168.68.105`) until a bcrypt user is added.
+setup wizard, so the admin login has to be declared too: `settings.users` holds a bcrypt hash from
+`htpasswd -nB ruben`. **Never remove that entry while the UI is on the LAN.** Without it the UI
+has no login at all. The UI is at `http://192.168.68.105:3000`, plain HTTP, with port 3000 opened by
+the module's `openFirewall`.
 
 ## Gotchas
 

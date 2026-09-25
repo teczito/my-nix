@@ -65,8 +65,9 @@ Done (in `modules/services/dns.nix`, reasoning in its comments):
 - Port 53 (TCP and UDP) is opened in the module. AdGuard's `openFirewall` covers only the UI port.
 - Upstreams are DoH (Quad9, Cloudflare). Plain `9.9.9.9`/`1.1.1.1` are used only to look up those two.
 - The AdGuard DNS filter list is on.
-- The admin UI is on `127.0.0.1:3000` only. Declaring settings skips AdGuard's wizard, so with no
-  `settings.users` the UI would have no login.
+- The admin UI is at `http://192.168.68.105:3000`, behind a login declared as a bcrypt hash in
+  `settings.users`. Declaring settings skips AdGuard's setup wizard, so without that entry the UI
+  would have no login at all.
 
 Still to do:
 
@@ -76,8 +77,8 @@ Still to do:
     empty if the app allows it. With the ISP resolver as secondary, clients use both and blocking
     becomes hit-and-miss.
   - Clients pick up the change when their lease renews; reconnecting forces it.
-- Add an admin user (a bcrypt hash from `htpasswd -nB`), then move the UI onto the LAN, either
-  directly or as a Caddy vhost.
+- Optionally, put the UI behind Caddy (HTTPS, a name instead of `:3000`) once the Caddy split below
+  is done.
 
 **IPv6 is not a bypass, so there is no need to disable it on the Deco.** An earlier revision of this
 doc said it was, before anything had been checked from a client. Measured from the zbook on 2026-09-25:
@@ -136,14 +137,14 @@ pattern), and apply it to DNS (53) and Caddy (80/443) the same way.
    through it: the AdGuard query log should show them.
 3. Split `caddy.nix` into the generic shell + move the PHP-specific bits out. It must coexist with the
    Caddy config that meal-planner's module already contributes.
-4. Add sops-nix only once a concrete secret needs it. The AdGuard admin password is probably fine as a
-   bcrypt hash in Nix, which makes this less urgent than first thought.
+4. Add sops-nix only once a concrete secret needs it. The AdGuard admin password is now a bcrypt hash
+   in Nix, which was judged good enough for a home LAN, so it did not trigger this.
 
 ## Open questions for whenever this gets picked back up
 
 - ~~Static LAN IP?~~ The server is at `192.168.68.105`. It still needs the DHCP reservation, which is a
   router setting, not a repo change.
-- Should AdGuard Home's admin UI be reachable from the LAN directly, or only through Caddy? For now it
-  is on loopback only, until an admin user exists.
+- ~~Should AdGuard Home's admin UI be reachable from the LAN directly, or only through Caddy?~~
+  Directly, on port 3000 with a login, since 2026-09-25. Caddy can take over later.
 - Any services beyond LLM/web/DNS in mind yet, or genuinely undecided ("...things I haven't thought of
   as of today")? Revisit the isolation policy above once a concrete third-party app is the trigger.

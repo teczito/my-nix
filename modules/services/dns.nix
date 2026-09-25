@@ -16,10 +16,11 @@ in
   services.adguardhome = {
     enable = true;
 
-    # Admin UI on loopback only for now. Reach it with
-    # `ssh -L 3000:localhost:3000 192.168.68.105`.
-    host = "127.0.0.1";
+    # Admin UI on the LAN at http://192.168.68.105:3000, behind the login
+    # below. Plain HTTP; moving it behind Caddy is on the roadmap.
+    host = lanAddress;
     port = 3000;
+    openFirewall = true;
 
     settings = {
       # The admin login. With settings declared, AdGuard skips its setup wizard,
