@@ -15,8 +15,10 @@ the reasoning has moved into the module itself.
   the `teczito.duckdns.org` vhost and opens 80/443/8080. `modules/services/caddy.nix` is a separate
   thing: it is **not imported anywhere**, and is written as a single PHP app server (its own phpfpm
   pool), not a shared reverse-proxy hub.
-- **DNS**: AdGuard Home in `modules/services/dns.nix`, imported by `hosts/server`. It builds, but as of
-  2026-09-25 it has **not been deployed** yet, so LAN resolution is still whatever the router hands out.
+- **DNS**: AdGuard Home in `modules/services/dns.nix`, imported by `hosts/server`, **deployed and
+  answering** on `192.168.68.105:53` as of 2026-09-25. It blocks ads too: `doubleclick.net` returns
+  `0.0.0.0`. No client uses it yet, because the router (a TP-Link Deco M5) still hands out the ISP's
+  resolvers, `37.247.0.27` and `37.247.0.55`, over DHCP.
 - **Secrets**: none set up. Nothing currently needs one.
 - **Isolation**: both docker and libvirtd are already imported (`docker.nix`, `virtualisation.nix`),
   so both a container path and a full-VM path already exist — nothing new to add there, just a rule
@@ -68,14 +70,33 @@ Done (in `modules/services/dns.nix`, reasoning in its comments):
 
 Still to do:
 
-- Deploy it: on the server, `git pull && ./rebuild_switch.sh`. Then check that
-  `dig @192.168.68.105 example.com` resolves and `dig @192.168.68.105 doubleclick.net` returns `0.0.0.0`.
-- Reserve `192.168.68.105` on the router, then point the router's DHCP DNS option at it.
-- **IPv6 bypasses AdGuard as things stand.** The router advertises its own IPv6 DNS server
-  (`fd8e:c1da:5885::1`), so IPv6-capable clients skip AdGuard. Either turn that off on the router, or
-  add the server's DHCPv6 address (`fd8e:c1da:5885::7a1` at the time of writing) to `bind_hosts`.
+- In the Deco app:
+  - Under More → Advanced → Address Reservation, reserve `192.168.68.105` for the server.
+  - Under More → Advanced → DHCP Server, set the primary DNS to `192.168.68.105`. Leave the secondary
+    empty if the app allows it. With the ISP resolver as secondary, clients use both and blocking
+    becomes hit-and-miss.
+  - Clients pick up the change when their lease renews; reconnecting forces it.
 - Add an admin user (a bcrypt hash from `htpasswd -nB`), then move the UI onto the LAN, either
   directly or as a Caddy vhost.
+
+**IPv6 is not a bypass, so there is no need to disable it on the Deco.** An earlier revision of this
+doc said it was, before anything had been checked from a client. Measured from the zbook on 2026-09-25:
+
+- There is no IPv6 internet. Every address on the LAN is ULA (`fd8e:c1da:5885::/48`), and `curl -6` to
+  anything outside fails.
+- The IPv6 DNS server the network advertises, `fd8e:c1da:5885::1`, answers `REFUSED` to every query
+  over both UDP and TCP, so resolvers skip it and fall through to the IPv4 servers. It is not the Deco
+  itself: it has MAC `10:fe:ed:e6:62:fc`, while `192.168.68.1` is `1c:61:b4:02:17:18`. It may be a Deco
+  satellite or the ISP modem.
+
+That changes if the ISP ever turns on IPv6. Then the advertised IPv6 resolver could start answering,
+and AdGuard should listen on the server's DHCPv6 address too (`fd8e:c1da:5885::7a1` at the time of
+writing, in `bind_hosts`). Re-check with `dig @fd8e:c1da:5885::1 example.com`.
+
+Only the first three `nameserver` lines in `/etc/resolv.conf` count; glibc ignores the rest. On the
+zbook, `192.168.68.105` currently lands in fourth place, after the two ISP resolvers and the refusing
+IPv6 one, so the laptop is not using AdGuard even though its Wi-Fi connection lists it. Once the
+router hands out `.105`, that fixes itself.
 
 ### 3. Secrets — sops-nix, added on first need
 
@@ -110,9 +131,9 @@ pattern), and apply it to DNS (53) and Caddy (80/443) the same way.
 ## Suggested order of implementation
 
 1. ~~Add `modules/services/dns.nix` (AdGuard Home), wire it into `hosts/server/default.nix`.~~
-   Written and building. Done ahead of the Caddy split, which turned out not to block it.
-2. Deploy DNS, reserve the IP, and point the router's DHCP DNS option at the server. Verify LAN
-   clients resolve through it, and handle the IPv6 bypass above.
+   Deployed and answering. Done ahead of the Caddy split, which turned out not to block it.
+2. Reserve the IP and point the Deco's DHCP DNS option at the server. Verify that LAN clients resolve
+   through it: the AdGuard query log should show them.
 3. Split `caddy.nix` into the generic shell + move the PHP-specific bits out. It must coexist with the
    Caddy config that meal-planner's module already contributes.
 4. Add sops-nix only once a concrete secret needs it. The AdGuard admin password is probably fine as a
