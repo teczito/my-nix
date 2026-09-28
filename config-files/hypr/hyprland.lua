@@ -439,8 +439,8 @@ hl.bind(mainMod .. " + T",             hl.dsp.window.pin())                     
 hl.bind(mainMod .. " + CTRL + M",      hl.dsp.window.fullscreen({ mode = "maximized", action = "toggle" })) -- Mod+Ctrl+m
 hl.bind(mainMod .. " + SHIFT + M",     hl.dsp.window.fullscreen({ mode = "maximized", action = "toggle" })) -- Mod+Shift+m, same as Mod+Ctrl+m: "maximized" covers both axes
 hl.bind(mainMod .. " + CTRL + return", hl.dsp.layout("swapwithmaster"))                                  -- Mod+Ctrl+Return
-hl.bind(mainMod .. " + I",             move_to_monitor(1))                                               -- Mod+i, move_to_screen(+1)
-hl.bind(mainMod .. " + O",             move_to_monitor(-1))                                              -- Mod+o, move_to_screen(-1)
+hl.bind(mainMod .. " + I",             move_to_monitor(-1))                                              -- Mod+i, move_to_screen(-1)
+hl.bind(mainMod .. " + O",             move_to_monitor(1))                                               -- Mod+o, move_to_screen(+1)
 
 -- Layout
 hl.bind(mainMod .. " + L",             hl.dsp.window.resize({ x = 40, y = 0 }))  -- Mod+l, incmwfact(0.05)
