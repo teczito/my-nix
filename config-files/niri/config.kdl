@@ -1,0 +1,260 @@
+// niri config -- experimental second session next to Hyprland, zbook only.
+//
+// ~/.config/niri is a symlink to this directory, like the other directories
+// under config-files/. niri watches this file and reloads it on save; a
+// rebuild does not deploy it. Validate an edit without logging in:
+//
+//     niri validate -c ~/.config/niri/config.kdl
+//
+// The keymap below is a translation of config-files/hypr/hyprland.lua's
+// KEYBINDINGS section. niri is a scrolling compositor -- windows sit in
+// columns on an infinite horizontal strip, workspaces stack vertically *per
+// monitor* -- so some Hyprland binds map onto a niri equivalent rather than
+// the identical action, and a few have none. Each is noted where it lands.
+//
+// Reference: https://github.com/YaLTeR/niri/wiki/Configuration:-Introduction
+
+
+// ---- GPU ----
+//
+// The same pin config-files/uwsm/env-hyprland gives Hyprland: render on the
+// Intel iGPU that owns every display, and never open the NVIDIA card at all,
+// so it stays in D3cold until `nvidia-offload` wakes it. Both names are udev
+// symlinks from modules/hardware/nvidia-prime.nix; /dev/dri/cardN swaps
+// between boots.
+debug {
+    render-drm-device "/dev/dri/igpu"
+    ignore-drm-device "/dev/dri/dgpu"
+}
+
+
+// ---- MONITORS ----
+//
+// Same desk layout as Hyprland: the three Iiyamas left to right, laptop to the
+// right. Matched on make/model/serial, which do not move with the dock.
+// Modes are pinned for the same reason as there.
+output "iiyama Corporation PL2796QS 1179911801568" {
+    mode "2560x1440@59.951"
+    position x=0 y=0
+    scale 1
+}
+output "iiyama Corporation PL2792Q 1226151422212" {
+    mode "2560x1440@59.951"
+    position x=2560 y=0
+    scale 1
+    focus-at-startup
+}
+output "iiyama Corporation PL2796QS 1179915302805" {
+    mode "2560x1440@59.951"
+    position x=5120 y=0
+    scale 1
+}
+// The panel stays ON. Hyprland switches it off only while docked, decided at
+// runtime from monitor events; niri's config has no conditional, and a static
+// `off` would leave an undocked laptop with no display. Toggle it by hand:
+//     niri msg output eDP-1 off    /    niri msg output eDP-1 on
+output "eDP-1" {
+    position x=7680 y=0
+    scale 1
+}
+
+
+// ---- INPUT ----
+
+input {
+    keyboard {
+        xkb {
+            layout "se,us"
+            options "grp:ctrls_toggle"
+        }
+    }
+
+    touchpad {
+        tap
+        natural-scroll
+    }
+
+    // Hyprland's follow_mouse = 1.
+    focus-follows-mouse
+}
+
+
+// ---- LOOK AND FEEL ----
+//
+// Roughly Hyprland's: 2px gaps, 2px gradient border, rounded corners.
+layout {
+    gaps 2
+    center-focused-column "never"
+
+    // Mod+Space cycles through these -- the nearest thing niri has to
+    // switching layouts.
+    preset-column-widths {
+        proportion 0.33333
+        proportion 0.5
+        proportion 0.66667
+        proportion 1.0
+    }
+    default-column-width { proportion 0.5; }
+
+    focus-ring {
+        width 2
+        active-gradient from="#33ccffee" to="#00ff99ee" angle=45
+        inactive-color "#595959aa"
+    }
+    border {
+        off
+    }
+}
+
+window-rule {
+    geometry-corner-radius 10
+    clip-to-geometry true
+}
+
+cursor {
+    xcursor-size 24
+}
+
+// Uncomment to skip the "Important Hotkeys" popup at startup.
+// hotkey-overlay {
+//     skip-at-startup
+// }
+
+screenshot-path "~/Pictures/Screenshots/Screenshot from %Y-%m-%d %H-%M-%S.png"
+
+
+// ---- AUTOSTART ----
+//
+// Nothing to start here. niri-session runs niri as niri.service, which binds
+// graphical-session.target -- the same target uwsm reaches for Hyprland -- so
+// waybar.service and elephant.service come up on their own. Starting waybar
+// here too would stack two bars, exactly as in hyprland.lua.
+//
+// XWayland: niri spawns xwayland-satellite on demand when it is on PATH
+// (modules/desktop/niri.nix installs it).
+
+
+// ---- KEYBINDINGS ----
+//
+// Mod is Super, as in Hyprland.
+
+binds {
+    Mod+Shift+Slash { show-hotkey-overlay; }
+
+    // Launchers -- identical to Hyprland.
+    Mod+Return       hotkey-overlay-title="Terminal"     { spawn "kitty"; }
+    Mod+Shift+Return hotkey-overlay-title="Terminal: tmux" { spawn "kitty" "bash" "-c" "tmux new-session -A -s main"; }
+    Mod+M            hotkey-overlay-title="Midnight Commander" { spawn "kitty" "mc"; }
+    Mod+W            hotkey-overlay-title="Browser"      { spawn "brave"; }
+    Mod+P            hotkey-overlay-title="Launcher"     { spawn "walker"; }
+    Mod+R            hotkey-overlay-title="Run command"  { spawn "walker" "--provider" "runner"; }
+    Mod+E            hotkey-overlay-title="File manager" { spawn "thunar"; }
+    // Region to clipboard, same grim+slurp pipeline. niri's own interactive
+    // screenshot UI is on Print.
+    Mod+Shift+S      hotkey-overlay-title="Screenshot region" { spawn-sh "grim -g \"$(slurp)\" - | wl-copy"; }
+    Print            { screenshot; }
+
+    // Session. niri asks for confirmation before quitting; Hyprland did not.
+    Mod+Shift+Q { quit; }
+    // niri already reloads on save; this is for forcing it.
+    Mod+Ctrl+R  { spawn "niri" "msg" "action" "load-config-file"; }
+
+    // Focus. J/K walk every window in order: down the current column, then on
+    // into the next -- the linear next/previous cycle of Hyprland's J/K.
+    Mod+K       { focus-window-down-or-column-right; }
+    Mod+J       { focus-window-up-or-column-left; }
+    // Swap with neighbour: in niri that is moving the column along the strip.
+    Mod+Shift+K { move-column-right; }
+    Mod+Shift+J { move-column-left; }
+    Mod+Ctrl+K  { focus-monitor-previous; }
+    Mod+Ctrl+J  { focus-monitor-next; }
+    Mod+Tab     { focus-window-previous; }
+    // Mod+U (focus urgent) has no niri action.
+
+    // Directional focus on the arrows, as in Hyprland. Up/down fall through to
+    // the neighbouring workspace at the edge of a column.
+    Mod+Left  { focus-column-left; }
+    Mod+Right { focus-column-right; }
+    Mod+Up    { focus-window-or-workspace-up; }
+    Mod+Down  { focus-window-or-workspace-down; }
+    // Moving windows on the arrows is extra -- Hyprland had no bind for it.
+    Mod+Shift+Left  { move-column-left; }
+    Mod+Shift+Right { move-column-right; }
+    Mod+Shift+Up    { move-window-up-or-to-workspace-up; }
+    Mod+Shift+Down  { move-window-down-or-to-workspace-down; }
+
+    // Client
+    Mod+Shift+C     { close-window; }
+    Mod+F           { fullscreen-window; }
+    Mod+Ctrl+Space  { toggle-window-floating; }
+    // Mod+T (pin / keep on top) has no niri action.
+    Mod+Ctrl+M      { maximize-column; }
+    Mod+Shift+M     { maximize-column; }
+    // Mod+Ctrl+Return was swapwithmaster; niri has no master. Centring the
+    // column is the nearest "bring this to the middle of attention".
+    Mod+Ctrl+Return { center-column; }
+    Mod+I           { move-window-to-monitor-previous; }
+    Mod+O           { move-window-to-monitor-next; }
+
+    // Layout. H/L grow and shrink the column by 5% -- Hyprland's comments
+    // call these incmwfact(+-0.05), which niri can express exactly.
+    Mod+L           { set-column-width "+5%"; }
+    Mod+H           { set-column-width "-5%"; }
+    // add/removemaster changed how many windows share the master area. The
+    // niri equivalent is stacking windows into, or out of, a column.
+    Mod+Shift+H     { consume-or-expel-window-left; }
+    Mod+Shift+L     { consume-or-expel-window-right; }
+    // No layouts to toggle; cycle column widths instead.
+    Mod+Space       { switch-preset-column-width; }
+    Mod+Shift+Space { switch-preset-column-width-back; }
+
+    // Workspaces. niri's are per monitor and dynamic, so Mod+N goes to the
+    // Nth workspace *of the focused monitor*, not a global workspace N as in
+    // Hyprland. Switch monitors with Mod+Ctrl+J/K first.
+    Mod+1 { focus-workspace 1; }
+    Mod+2 { focus-workspace 2; }
+    Mod+3 { focus-workspace 3; }
+    Mod+4 { focus-workspace 4; }
+    Mod+5 { focus-workspace 5; }
+    Mod+6 { focus-workspace 6; }
+    Mod+7 { focus-workspace 7; }
+    Mod+8 { focus-workspace 8; }
+    Mod+9 { focus-workspace 9; }
+    Mod+0 { focus-workspace 10; }
+    Mod+Shift+1 { move-window-to-workspace 1; }
+    Mod+Shift+2 { move-window-to-workspace 2; }
+    Mod+Shift+3 { move-window-to-workspace 3; }
+    Mod+Shift+4 { move-window-to-workspace 4; }
+    Mod+Shift+5 { move-window-to-workspace 5; }
+    Mod+Shift+6 { move-window-to-workspace 6; }
+    Mod+Shift+7 { move-window-to-workspace 7; }
+    Mod+Shift+8 { move-window-to-workspace 8; }
+    Mod+Shift+9 { move-window-to-workspace 9; }
+    Mod+Shift+0 { move-window-to-workspace 10; }
+
+    // Mod+S / Mod+Ctrl+S (scratchpad) have no niri action. The overview is the
+    // closest "show me everything" key; it is also on the top-left hot corner.
+    Mod+S { toggle-overview; }
+
+    // Scroll through workspaces with Mod + wheel.
+    Mod+WheelScrollDown cooldown-ms=150 { focus-workspace-down; }
+    Mod+WheelScrollUp   cooldown-ms=150 { focus-workspace-up; }
+
+    // Mod+LMB drag moves and Mod+RMB drag resizes windows natively; nothing
+    // to bind.
+
+    // Laptop multimedia keys, working on the lock screen too.
+    XF86AudioRaiseVolume  allow-when-locked=true { spawn-sh "wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+"; }
+    XF86AudioLowerVolume  allow-when-locked=true { spawn-sh "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"; }
+    XF86AudioMute         allow-when-locked=true { spawn-sh "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"; }
+    XF86AudioMicMute      allow-when-locked=true { spawn-sh "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"; }
+    XF86MonBrightnessUp   allow-when-locked=true { spawn "brightnessctl" "-e4" "-n2" "set" "5%+"; }
+    XF86MonBrightnessDown allow-when-locked=true { spawn "brightnessctl" "-e4" "-n2" "set" "5%-"; }
+    XF86AudioNext  allow-when-locked=true { spawn "playerctl" "next"; }
+    XF86AudioPause allow-when-locked=true { spawn "playerctl" "play-pause"; }
+    XF86AudioPlay  allow-when-locked=true { spawn "playerctl" "play-pause"; }
+    XF86AudioPrev  allow-when-locked=true { spawn "playerctl" "previous"; }
+
+    // niri's escape hatch for apps that grab the keyboard.
+    Mod+Escape allow-inhibiting=false { toggle-keyboard-shortcuts-inhibit; }
+}

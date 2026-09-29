@@ -84,7 +84,13 @@
   # mkBefore, not bare assignment: `lines` options merge in module order, which
   # is not the order of a host's imports list and is not worth depending on.
   # This pins the iGPU symlink above the TI rules in the generated file.
+  #
+  # /dev/dri/dgpu is the same idea for the NVIDIA card (0000:01:00.0, the
+  # nvidiaBusId above). niri takes it as `ignore-drm-device` in
+  # config-files/niri/config.kdl, so it never opens the card and leaves it in
+  # D3cold -- niri's counterpart of the AQ_DRM_DEVICES pin.
   services.udev.extraRules = lib.mkBefore ''
     KERNEL=="card*", SUBSYSTEM=="drm", DEVPATH=="*/0000:00:02.0/drm/card*", SYMLINK+="dri/igpu"
+    KERNEL=="card*", SUBSYSTEM=="drm", DEVPATH=="*/0000:01:00.0/drm/card*", SYMLINK+="dri/dgpu"
   '';
 }

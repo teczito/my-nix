@@ -15,6 +15,7 @@
 
     ../../modules/common
     ../../modules/desktop
+    ../../modules/desktop/niri.nix
     ../../users/ruben/desktop.nix
 
     ../../modules/hardware/nvidia-prime.nix
