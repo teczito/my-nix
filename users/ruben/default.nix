@@ -44,6 +44,14 @@
           set-environment -g COLORTERM "truecolor"
           set -g visual-bell on
 
+          # The tmux server outlives a compositor logout, so its environment
+          # still names the previous session's IPC socket after a re-login, and
+          # `niri msg` / `hyprctl` in every pane fail with "error connecting to
+          # the niri socket". Refresh them from the client on each attach, like
+          # WAYLAND_DISPLAY already is. Only panes created after the attach see
+          # the new value.
+          set -ga update-environment "NIRI_SOCKET HYPRLAND_INSTANCE_SIGNATURE"
+
           # Some custom bindings
           bind C-a select-window -t:!
           bind a send-prefix
