@@ -16,6 +16,31 @@
   # elephant.service below start with the session. No uwsm is involved.
   programs.niri.enable = true;
 
+  # niri-session imports the login environment with a bare
+  # `systemctl --user import-environment`, and systemd 261 prints
+  #   Calling import-environment without a list of variable names is deprecated.
+  # to the greeter's TTY on every login. It is also a real hazard: once systemd
+  # drops the no-argument form, the session starts without the login
+  # environment. Swap in a copy of the script that names every variable
+  # explicitly -- the same awk niri's own dinit branch uses -- instead.
+  #
+  # Only bin/niri-session is replaced, so niri itself is not rebuilt: niri.desktop
+  # execs `niri-session` by bare name through PATH, and niri.service runs the
+  # original package's bin/niri directly.
+  programs.niri.package = pkgs.symlinkJoin {
+    name = "niri-${pkgs.niri.version}";
+    paths = [ pkgs.niri ];
+    inherit (pkgs.niri) passthru meta;
+    postBuild = ''
+      rm $out/bin/niri-session
+      substitute ${pkgs.niri}/bin/niri-session $out/bin/niri-session \
+        --replace-fail \
+          'systemctl --user import-environment' \
+          'systemctl --user import-environment $(awk '"'"'BEGIN{for(v in ENVIRON) if (v != "AWKPATH" && v != "AWKLIBPATH") print v}'"'"')'
+      chmod +x $out/bin/niri-session
+    '';
+  };
+
   # FileChooser through xdg-desktop-portal-gtk instead of registering Nautilus
   # on D-Bus; thunar is the file manager here. The GNOME portal itself is still
   # added by the module -- niri needs it for screencasting.
