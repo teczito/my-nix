@@ -63,32 +63,24 @@
     };
   };
 
-  # A colon-free stable alias for the iGPU's DRM node, consumed by
-  # AQ_DRM_DEVICES in config-files/uwsm/env-hyprland to pin Hyprland to the
-  # Intel card.
+  # Stable aliases for the two DRM nodes, consumed by the `debug` block in
+  # config-files/niri/config.kdl: niri renders on /dev/dri/igpu (the iGPU that
+  # owns every display) and ignores /dev/dri/dgpu, so it never opens the NVIDIA
+  # card and leaves it in D3cold until `nvidia-offload` wakes it.
   #
-  # This exists because AQ_DRM_DEVICES is a *colon-separated list*, like PATH.
-  # The obvious stable name, /dev/dri/by-path/pci-0000:00:02.0-card, carries
-  # two colons of its own, so aquamarine splits it into three nonexistent
-  # paths ("/dev/dri/by-path/pci-0000", "00", "02.0-card"), finds no usable
-  # GPU, and aborts the session with "CBackend::create() failed!".
-  # Plain /dev/dri/cardN would parse, but the numbering is not stable across
-  # boots -- the NVIDIA card currently takes card0 and the iGPU card1.
-  #
-  # Matching on the PCI slot (0000:00:02.0, the same device as intelBusId
-  # above) rather than on a card number keeps this pinned to the iGPU however
-  # the DRM nodes happen to enumerate.
+  # Plain /dev/dri/cardN would do, but the numbering is not stable across
+  # boots -- the NVIDIA card currently takes card0 and the iGPU card1. Matching
+  # on the PCI slot (0000:00:02.0 and 0000:01:00.0, the intelBusId and
+  # nvidiaBusId above) keeps each name on the right card however the DRM nodes
+  # happen to enumerate. The names are also deliberately colon-free: Hyprland,
+  # which used to consume igpu through AQ_DRM_DEVICES, split that variable on
+  # colons, which ruled out the /dev/dri/by-path/pci-0000:00:02.0-card form.
   #
   # services.udev.extraRules is a `lines` option, so this definition merges
-  # with the one in configuration.nix rather than colliding with it.
+  # with the TI rules in modules/services/devices.nix rather than colliding.
   # mkBefore, not bare assignment: `lines` options merge in module order, which
   # is not the order of a host's imports list and is not worth depending on.
-  # This pins the iGPU symlink above the TI rules in the generated file.
-  #
-  # /dev/dri/dgpu is the same idea for the NVIDIA card (0000:01:00.0, the
-  # nvidiaBusId above). niri takes it as `ignore-drm-device` in
-  # config-files/niri/config.kdl, so it never opens the card and leaves it in
-  # D3cold -- niri's counterpart of the AQ_DRM_DEVICES pin.
+  # This pins these symlinks above the TI rules in the generated file.
   services.udev.extraRules = lib.mkBefore ''
     KERNEL=="card*", SUBSYSTEM=="drm", DEVPATH=="*/0000:00:02.0/drm/card*", SYMLINK+="dri/igpu"
     KERNEL=="card*", SUBSYSTEM=="drm", DEVPATH=="*/0000:01:00.0/drm/card*", SYMLINK+="dri/dgpu"

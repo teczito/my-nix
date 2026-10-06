@@ -33,7 +33,7 @@
       ];
 
       programs.bash.shellAliases = {
-        # KiCad upstream does not support the GTK Wayland backend. Under Hyprland
+        # KiCad upstream does not support the GTK Wayland backend. Under Wayland
         # it lands on wx's EGL/wl_egl canvas path, where zoom/pan stutters and
         # cursor warping (Preferences > Common > "Center and warp cursor on zoom")
         # silently no-ops. Pin it to XWayland/GLX instead.

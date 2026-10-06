@@ -1,4 +1,4 @@
-// niri config -- experimental second session next to Hyprland, zbook only.
+// niri config -- the only session, on both the zbook and the server.
 //
 // ~/.config/niri is a symlink to this directory, like the other directories
 // under config-files/. niri watches this file and reloads it on save; a
@@ -6,22 +6,27 @@
 //
 //     niri validate -c ~/.config/niri/config.kdl
 //
-// The keymap below is a translation of config-files/hypr/hyprland.lua's
-// KEYBINDINGS section. niri is a scrolling compositor -- windows sit in
-// columns on an infinite horizontal strip, workspaces stack vertically *per
-// monitor* -- so some Hyprland binds map onto a niri equivalent rather than
-// the identical action, and a few have none. Each is noted where it lands.
+// The keymap below is a translation of the KEYBINDINGS section of
+// config-files/hypr/hyprland.lua, from when Hyprland was the session here (it
+// was removed 2026-10-06; `git log -- config-files/hypr` has it). niri is a
+// scrolling compositor -- windows sit in columns on an infinite horizontal
+// strip, workspaces stack vertically *per monitor* -- so some Hyprland binds
+// map onto a niri equivalent rather than the identical action, and a few have
+// none. Each is noted where it lands.
 //
 // Reference: https://github.com/YaLTeR/niri/wiki/Configuration:-Introduction
 
 
 // ---- GPU ----
 //
-// The same pin config-files/uwsm/env-hyprland gives Hyprland: render on the
-// Intel iGPU that owns every display, and never open the NVIDIA card at all,
-// so it stays in D3cold until `nvidia-offload` wakes it. Both names are udev
-// symlinks from modules/hardware/nvidia-prime.nix; /dev/dri/cardN swaps
-// between boots.
+// Render on the Intel iGPU that owns every display, and never open the NVIDIA
+// card at all, so it stays in D3cold until `nvidia-offload` wakes it. Both
+// names are udev symlinks from modules/hardware/nvidia-prime.nix;
+// /dev/dri/cardN swaps between boots.
+//
+// The server has neither symlink. niri then logs "error opening ... as DRM
+// node" and falls back to picking the primary GPU itself, which is what a
+// single-GPU host wants, so this block is safe to share.
 debug {
     render-drm-device "/dev/dri/igpu"
     ignore-drm-device "/dev/dri/dgpu"
@@ -30,7 +35,7 @@ debug {
 
 // ---- MONITORS ----
 //
-// Same desk layout as Hyprland: the three Iiyamas left to right, laptop to the
+// Same desk layout as before: the three Iiyamas left to right, laptop to the
 // right. Matched on make/model/serial, which do not move with the dock.
 // Modes are pinned for the same reason as there.
 output "iiyama Corporation PL2796QS 1179911801568" {
@@ -49,8 +54,8 @@ output "iiyama Corporation PL2796QS 1179915302805" {
     position x=5120 y=0
     scale 1
 }
-// The panel stays ON. Hyprland switches it off only while docked, decided at
-// runtime from monitor events; niri's config has no conditional, and a static
+// The panel stays ON. Hyprland used to switch it off only while docked, from
+// monitor events at runtime; niri's config has no conditional, and a static
 // `off` would leave an undocked laptop with no display. Toggle it by hand:
 //     niri msg output eDP-1 off    /    niri msg output eDP-1 on
 output "eDP-1" {
@@ -126,9 +131,8 @@ screenshot-path "~/Pictures/Screenshots/Screenshot from %Y-%m-%d %H-%M-%S.png"
 // ---- AUTOSTART ----
 //
 // Nothing to start here. niri-session runs niri as niri.service, which binds
-// graphical-session.target -- the same target uwsm reaches for Hyprland -- so
-// waybar.service and elephant.service come up on their own. Starting waybar
-// here too would stack two bars, exactly as in hyprland.lua.
+// graphical-session.target, so waybar.service and elephant.service come up
+// on their own. Starting waybar here too would stack two bars.
 //
 // XWayland: niri spawns xwayland-satellite on demand when it is on PATH
 // (modules/desktop/niri.nix installs it).
@@ -139,7 +143,7 @@ screenshot-path "~/Pictures/Screenshots/Screenshot from %Y-%m-%d %H-%M-%S.png"
 // Mod is Super, as in Hyprland.
 
 binds {
-    Mod+Shift+Slash { show-hotkey-overlay; }
+    Mod+Shift+A { show-hotkey-overlay; }
 
     // Launchers -- identical to Hyprland.
     Mod+Return       hotkey-overlay-title="Terminal"     { spawn "kitty"; }

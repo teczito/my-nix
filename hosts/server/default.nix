@@ -10,7 +10,7 @@
 
     ../../modules/common
 
-    # Hyprland and the rest of the graphical stack. Nothing here needs a display
+    # niri and the rest of the graphical stack. Nothing here needs a display
     # to boot: greetd sits on the console waiting, and a session only starts
     # when someone logs in at an attached monitor.
     #

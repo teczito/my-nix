@@ -6,7 +6,7 @@
     ./audio.nix
     ./fonts.nix
     ./greetd.nix
-    ./hyprland.nix
+    ./niri.nix
     ./portals.nix
   ];
 

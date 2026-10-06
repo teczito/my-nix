@@ -7,16 +7,10 @@
     "spacing": 4, // Gaps between modules (4px)
     // Choose the order of the modules
     "modules-left": [
-        // Each compositor's modules disable themselves under the other one
-        // ("Disabling module ... Is Hyprland running?" / "Niri is not running"),
-        // so one config serves both sessions.
-        "hyprland/workspaces",
         "niri/workspaces",
-        "hyprland/submap",
         "custom/media"
     ],
     "modules-center": [
-        "hyprland/window",
         "niri/window"
     ],
     "modules-right": [
@@ -30,7 +24,6 @@
         "temperature",
         "backlight",
         "keyboard-state",
-        "hyprland/language",
         "niri/language",
         "battery",
         "clock",
@@ -38,22 +31,6 @@
         "custom/power"
     ],
     // Modules configuration
-    // "hyprland/workspaces": {
-    //     "disable-scroll": true,
-    //     "all-outputs": true,
-    //     "warp-on-scroll": false,
-    //     "format": "{name}: {icon}",
-    //     "format-icons": {
-    //         "1": "",
-    //         "2": "",
-    //         "3": "",
-    //         "4": "",
-    //         "5": "",
-    //         "urgent": "",
-    //         "focused": "",
-    //         "default": ""
-    //     }
-    // },
     "keyboard-state": {
         "numlock": true,
         "capslock": true,
@@ -63,22 +40,8 @@
             "unlocked": ""
         }
     },
-    "hyprland/language": {
-      "format": "{short}",
-      "keyboard-name": "at-translated-set-2-keyboard"
-    },
     "niri/language": {
       "format": "{short}"
-    },
-    "hyprland/mode": {
-        "format": "<span style=\"italic\">{}</span>"
-    },
-    "hyprland/scratchpad": {
-        "format": "{icon} {count}",
-        "show-empty": false,
-        "format-icons": ["", ""],
-        "tooltip": true,
-        "tooltip-format": "{app}: {title}"
     },
     "mpd": {
         "format": "{stateIcon} {consumeIcon}{randomIcon}{repeatIcon}{singleIcon}{artist} - {album} - {title} ({elapsedTime:%M:%S}/{totalTime:%M:%S}) ⸨{songPosition}|{queueLength}⸩ {volume}% ",
