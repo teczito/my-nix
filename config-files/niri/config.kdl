@@ -147,7 +147,7 @@ binds {
 
     // Launchers -- identical to Hyprland.
     Mod+Return       hotkey-overlay-title="Terminal"     { spawn "kitty"; }
-    Mod+Shift+Return hotkey-overlay-title="Terminal: tmux" { spawn "kitty" "bash" "-c" "tmux new-session -A -s main"; }
+    Mod+Shift+Return hotkey-overlay-title="Terminal: tmux" { spawn "kitty" "bash" "-c" "tmux new-session -t main"; }
     Mod+M            hotkey-overlay-title="Midnight Commander" { spawn "kitty" "mc"; }
     Mod+W            hotkey-overlay-title="Browser"      { spawn "brave"; }
     Mod+P            hotkey-overlay-title="Launcher"     { spawn "walker"; }
