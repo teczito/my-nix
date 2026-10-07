@@ -19,5 +19,6 @@
     # from their phones. The module leaves the port shut by default because
     # opening one is a decision about the network; this is that decision.
     openFirewall = true;
+    ntfy.url = "https://ntfy.sh";
   };
 }
