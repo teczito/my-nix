@@ -50,6 +50,30 @@
       ];
   };
 
+  # Let the greeter power off and reboot without depending on its logind
+  # session. logind's own policy only allows these for an *active* session,
+  # and the greeter does not always get one: on 2026-10-02 niri exited with
+  # the lid closed on the dock, logind stopped counting the now-unlit external
+  # outputs as "docked" and suspended at the same instant. systemd-sleep froze
+  # user.slice, so the new greeter's CreateSession failed
+  # (io.systemd.Login.UnitAllocationFailed) and after resume tuigreet was
+  # running outside any session. Its poweroff then failed with "Access
+  # denied as the requested operation requires interactive authentication".
+  # Anyone at the greeter can already hold the power button, so this grants
+  # nothing new.
+  security.polkit.extraConfig = ''
+    polkit.addRule(function (action, subject) {
+      if (subject.user == "greeter" && [
+            "org.freedesktop.login1.power-off",
+            "org.freedesktop.login1.power-off-multiple-sessions",
+            "org.freedesktop.login1.reboot",
+            "org.freedesktop.login1.reboot-multiple-sessions",
+          ].indexOf(action.id) >= 0) {
+        return polkit.Result.YES;
+      }
+    });
+  '';
+
   # gnome-keyring was enabled only as a side effect of the GNOME desktop
   # module (services/desktop-managers/gnome.nix), which is gone now. The
   # keyring is not GNOME-specific and login really was unlocking it

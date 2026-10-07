@@ -58,6 +58,15 @@
   # Laptop hardware: there is a touchpad to configure.
   services.libinput.touchpad.naturalScrolling = true;
 
+  # Closing the lid on mains power does nothing; on battery it still suspends.
+  # logind's own HandleLidSwitchDocked=ignore is not enough here, because it
+  # decides "docked" by counting *enabled* external outputs: the moment niri
+  # exits they go dark, logind sees a closed lid on an undocked laptop, and
+  # suspends mid-logout. On 2026-10-02 that froze user.slice while greetd was
+  # starting the greeter, which came back with no logind session and could not
+  # power off (see the polkit rule in modules/desktop/greetd.nix).
+  services.logind.settings.Login.HandleLidSwitchExternalPower = "ignore";
+
   # /var/lib/docker is on the btrfs root here. See modules/services/docker.nix.
   virtualisation.docker.storageDriver = "btrfs";
 
