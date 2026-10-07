@@ -24,6 +24,23 @@
         nix-index
         nix-tree
         tree
+
+        # Mod+Shift+Return in niri. Attach to a session no client is showing
+        # yet, and only start a new one when every session is already on
+        # screen (or none exist). `new-session -A -s main` reopened the same
+        # session in every terminal, and `-t main` cloned it into a group.
+        (writeShellApplication {
+          name = "tmux-attach-or-new";
+          runtimeInputs = [ config.programs.tmux.package ];
+          text = ''
+            detached=$(tmux list-sessions -f '#{==:#{session_attached},0}' \
+              -F '#{session_name}' 2>/dev/null | head -n1 || true)
+            if [ -n "$detached" ]; then
+              exec tmux attach-session -t "=$detached"
+            fi
+            exec tmux new-session
+          '';
+        })
       ];
 
       programs.tmux = {
