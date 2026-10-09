@@ -55,6 +55,11 @@
   # opposite of what a headless host wants.
   systemd.services.sshd.wantedBy = lib.mkForce [ ];
 
+  # lan-mouse (keyboard/mouse sharing with other machines on the LAN) listens
+  # on UDP 4242. Without this the firewall drops a peer's packets silently and
+  # the connection just times out.
+  networking.firewall.allowedUDPPorts = [ 4242 ];
+
   # Laptop hardware: there is a touchpad to configure.
   services.libinput.touchpad.naturalScrolling = true;
 
