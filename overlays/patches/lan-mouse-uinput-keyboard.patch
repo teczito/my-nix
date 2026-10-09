@@ -1,0 +1,209 @@
+diff --git a/input-emulation/src/lib.rs b/input-emulation/src/lib.rs
+index f77c607..40d51e0 100644
+--- a/input-emulation/src/lib.rs
++++ b/input-emulation/src/lib.rs
+@@ -14,6 +14,8 @@ mod windows;
+ #[cfg(x11)]
+ mod x11;
+ 
++#[cfg(wlroots)]
++mod uinput;
+ #[cfg(wlroots)]
+ mod wlroots;
+ 
+diff --git a/input-emulation/src/uinput.rs b/input-emulation/src/uinput.rs
+new file mode 100644
+index 0000000..25e4121
+--- /dev/null
++++ b/input-emulation/src/uinput.rs
+@@ -0,0 +1,130 @@
++//! Kernel-level keyboard emulation through /dev/uinput.
++//!
++//! Keys sent through `zwp_virtual_keyboard_v1` are forwarded by some compositors
++//! (e.g. smithay-based ones such as niri) directly to the focused client, which
++//! bypasses the compositor's own keybindings and its xkb modifier state. A uinput
++//! device instead shows up as a real evdev keyboard, so the compositor handles it
++//! exactly like the built-in one: bindings, AltGr / level3, layouts and repeat.
++
++use std::fs::{File, OpenOptions};
++use std::io::{self, Write};
++use std::os::fd::AsRawFd;
++use std::os::raw::{c_int, c_ulong};
++
++unsafe extern "C" {
++    fn ioctl(fd: c_int, request: c_ulong, ...) -> c_int;
++}
++
++// linux/uinput.h
++const UI_DEV_CREATE: c_ulong = 0x5501;
++const UI_DEV_DESTROY: c_ulong = 0x5502;
++const UI_DEV_SETUP: c_ulong = 0x405c5503; // _IOW('U', 3, struct uinput_setup)
++const UI_SET_EVBIT: c_ulong = 0x40045564; // _IOW('U', 100, int)
++const UI_SET_KEYBIT: c_ulong = 0x40045565; // _IOW('U', 101, int)
++
++// linux/input-event-codes.h
++const EV_SYN: u16 = 0x00;
++const EV_KEY: u16 = 0x01;
++const SYN_REPORT: u16 = 0;
++const BUS_VIRTUAL: u16 = 0x06;
++/// Keyboard keys only: everything below BTN_MISC (0x100), so libinput
++/// classifies the device as a keyboard and not as a pointer.
++const MAX_KEY: c_int = 0xff;
++
++#[repr(C)]
++struct InputId {
++    bustype: u16,
++    vendor: u16,
++    product: u16,
++    version: u16,
++}
++
++#[repr(C)]
++struct UinputSetup {
++    id: InputId,
++    name: [u8; 80],
++    ff_effects_max: u32,
++}
++
++#[repr(C)]
++struct InputEvent {
++    tv_sec: i64,
++    tv_usec: i64,
++    type_: u16,
++    code: u16,
++    value: i32,
++}
++
++pub(crate) struct UinputKeyboard {
++    file: File,
++}
++
++fn check(ret: c_int) -> io::Result<()> {
++    if ret < 0 {
++        Err(io::Error::last_os_error())
++    } else {
++        Ok(())
++    }
++}
++
++impl UinputKeyboard {
++    pub(crate) fn new() -> io::Result<Self> {
++        let file = OpenOptions::new().write(true).open("/dev/uinput")?;
++        let fd = file.as_raw_fd();
++        let mut setup = UinputSetup {
++            id: InputId {
++                bustype: BUS_VIRTUAL,
++                vendor: 0x4c4d, // "LM"
++                product: 0x0001,
++                version: 1,
++            },
++            name: [0; 80],
++            ff_effects_max: 0,
++        };
++        let name = b"lan-mouse virtual keyboard";
++        setup.name[..name.len()].copy_from_slice(name);
++        unsafe {
++            check(ioctl(fd, UI_SET_EVBIT, EV_KEY as c_int))?;
++            check(ioctl(fd, UI_SET_EVBIT, EV_SYN as c_int))?;
++            for key in 1..=MAX_KEY {
++                check(ioctl(fd, UI_SET_KEYBIT, key))?;
++            }
++            check(ioctl(fd, UI_DEV_SETUP, &setup as *const UinputSetup))?;
++            check(ioctl(fd, UI_DEV_CREATE))?;
++        }
++        Ok(Self { file })
++    }
++
++    fn emit(&mut self, type_: u16, code: u16, value: i32) -> io::Result<()> {
++        let ev = InputEvent {
++            tv_sec: 0,
++            tv_usec: 0,
++            type_,
++            code,
++            value,
++        };
++        let bytes = unsafe {
++            std::slice::from_raw_parts(
++                &ev as *const InputEvent as *const u8,
++                std::mem::size_of::<InputEvent>(),
++            )
++        };
++        self.file.write_all(bytes)
++    }
++
++    pub(crate) fn key(&mut self, key: u32, state: u8) -> io::Result<()> {
++        if key == 0 || key > MAX_KEY as u32 {
++            return Ok(());
++        }
++        self.emit(EV_KEY, key as u16, if state == 0 { 0 } else { 1 })?;
++        self.emit(EV_SYN, SYN_REPORT, 0)
++    }
++}
++
++impl Drop for UinputKeyboard {
++    fn drop(&mut self) {
++        unsafe {
++            ioctl(self.file.as_raw_fd(), UI_DEV_DESTROY);
++        }
++    }
++}
+diff --git a/input-emulation/src/wlroots.rs b/input-emulation/src/wlroots.rs
+index f79f8d9..80d3394 100644
+--- a/input-emulation/src/wlroots.rs
++++ b/input-emulation/src/wlroots.rs
+@@ -33,6 +33,7 @@ use wayland_client::{
+ use input_event::{Event, KeyboardEvent, PointerEvent, scancode};
+ 
+ use super::EmulationHandle;
++use super::uinput::UinputKeyboard;
+ use super::error::WaylandBindError;
+ 
+ struct State {
+@@ -104,9 +105,23 @@ impl State {
+             panic!("no keymap");
+         }
+ 
++        // Prefer a kernel-level keyboard, so the compositor's own keybindings and
++        // modifier handling see the keys; fall back to the virtual keyboard.
++        let uinput = match UinputKeyboard::new() {
++            Ok(kbd) => {
++                log::info!("using /dev/uinput for keyboard emulation");
++                Some(Mutex::new(kbd))
++            }
++            Err(e) => {
++                log::warn!("/dev/uinput unavailable ({e}), using virtual-keyboard protocol");
++                None
++            }
++        };
++
+         let vinput = VirtualInput {
+             pointer,
+             keyboard,
++            uinput,
+             modifiers: Arc::new(Mutex::new(XMods::empty())),
+         };
+ 
+@@ -179,6 +194,7 @@ impl Emulation for WlrootsEmulation {
+ struct VirtualInput {
+     pointer: Vp,
+     keyboard: Vk,
++    uinput: Option<Mutex<UinputKeyboard>>,
+     modifiers: Arc<Mutex<XMods>>,
+ }
+ 
+@@ -216,6 +232,15 @@ impl VirtualInput {
+                 }
+                 self.pointer.frame();
+             }
++            Event::Keyboard(e) if self.uinput.is_some() => {
++                // the kernel device carries modifiers as ordinary keys
++                if let KeyboardEvent::Key { key, state, .. } = e {
++                    let mut kbd = self.uinput.as_ref().unwrap().lock().unwrap();
++                    if let Err(e) = kbd.key(key, state) {
++                        log::warn!("uinput write failed: {e}");
++                    }
++                }
++            }
+             Event::Keyboard(e) => match e {
+                 KeyboardEvent::Key { time, key, state } => {
+                     self.keyboard.key(time, key, state as u32);

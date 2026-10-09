@@ -59,6 +59,11 @@
   # on UDP 4242. Without this the firewall drops a peer's packets silently and
   # the connection just times out.
   networking.firewall.allowedUDPPorts = [ 4242 ];
+  # The patched lan-mouse (overlays/default.nix) emulates the keyboard through
+  # /dev/uinput, so niri's keybindings and AltGr work for a remote keyboard.
+  environment.systemPackages = [ pkgs.lan-mouse ];
+  hardware.uinput.enable = true;
+  users.users.ruben.extraGroups = [ "uinput" ];
 
   # Laptop hardware: there is a touchpad to configure.
   services.libinput.touchpad.naturalScrolling = true;
