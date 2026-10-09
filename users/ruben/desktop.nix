@@ -4,6 +4,8 @@
 # tools that only make sense on a machine you sit in front of. A headless host
 # imports ./default.nix and stops there.
 {
+  imports = [ ./theme.nix ];
+
   # For xpdf in home.packages below.
   nixpkgs.config.permittedInsecurePackages = [
     "xpdf-4.06"

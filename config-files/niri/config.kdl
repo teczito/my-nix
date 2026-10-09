@@ -86,7 +86,8 @@ input {
 
 // ---- LOOK AND FEEL ----
 //
-// Roughly Hyprland's: 2px gaps, 2px gradient border, rounded corners.
+// 2px gaps and a gradient focus ring, as under Hyprland; soft drop shadows and
+// 12px corners to go with Yaru (users/ruben/theme.nix).
 layout {
     gaps 2
     center-focused-column "never"
@@ -109,14 +110,28 @@ layout {
     border {
         off
     }
+    shadow {
+        on
+        softness 30
+        spread 4
+        offset x=0 y=6
+        color "#00000070"
+    }
 }
 
 window-rule {
-    geometry-corner-radius 10
+    geometry-corner-radius 12
     clip-to-geometry true
 }
 
+// Inactive windows recede a little, as unfocused windows do under GNOME.
+window-rule {
+    match is-active=false
+    opacity 0.96
+}
+
 cursor {
+    xcursor-theme "Yaru"
     xcursor-size 24
 }
 

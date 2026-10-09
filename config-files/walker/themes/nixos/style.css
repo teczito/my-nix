@@ -16,12 +16,16 @@
  *   theme_fg_color   #f2ecbc -> rgba(255, 255, 255, 0.8)  (old `foreground`)
  *   selected item background alpha 0.25 -> 0.4  (old theme used 0.4)
  *
- * window_bg_color needed no change: the old theme's
- * hsla(240, 12.7%, 13.9%, 0.98) is #1f1f28, which is already upstream's value.
+ * Since then, for the Ubuntu look (users/ruben/theme.nix): accent_bg_color is
+ * niri's focus-ring blue #7fc8ff and window_bg_color is Yaru-dark #242424, replacing
+ * #008170 and #1f1f28 above.
+ *
+ * (Before that, window_bg_color needed no change: the old theme's
+ * hsla(240, 12.7%, 13.9%, 0.98) is #1f1f28, which is already upstream's value.)
  */
 
-@define-color window_bg_color #1f1f28;
-@define-color accent_bg_color #008170;
+@define-color window_bg_color #242424;
+@define-color accent_bg_color #7fc8ff;
 @define-color theme_fg_color rgba(255, 255, 255, 0.8);
 @define-color error_bg_color #C34043;
 @define-color error_fg_color #DCD7BA;

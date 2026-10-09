@@ -12,5 +12,14 @@
     noto-fonts-cjk-sans
     noto-fonts-color-emoji
     proggyfonts
+    ubuntu-sans
+    ubuntu-sans-mono
   ];
+
+  # The Ubuntu look (users/ruben/theme.nix): Ubuntu Sans as the default UI and
+  # monospace face for anything that asks fontconfig rather than naming a font.
+  fonts.fontconfig.defaultFonts = {
+    sansSerif = [ "Ubuntu Sans" ];
+    monospace = [ "Ubuntu Sans Mono" ];
+  };
 }
