@@ -70,6 +70,13 @@
   # /var/lib/docker is on the btrfs root here. See modules/services/docker.nix.
   virtualisation.docker.storageDriver = "btrfs";
 
+  # Run aarch64 binaries through QEMU user-mode emulation, so docker can build
+  # and run arm64 images for the Toradex Verdin iMX8MP (Torizon IDE extension).
+  # Static emulators let the kernel preload qemu at registration time (the F
+  # flag), so it also works inside containers that cannot see /nix/store.
+  boot.binfmt.emulatedSystems = [ "aarch64-linux" ];
+  boot.binfmt.preferStaticEmulators = true;
+
   # Some programs need SUID wrappers, can be configured further or are
   # started in user sessions.
   # programs.mtr.enable = true;
