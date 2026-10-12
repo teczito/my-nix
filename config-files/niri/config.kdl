@@ -212,8 +212,8 @@ binds {
     // Mod+Ctrl+Return was swapwithmaster; niri has no master. Centring the
     // column is the nearest "bring this to the middle of attention".
     Mod+Ctrl+Return { center-column; }
-    Mod+I           { move-window-to-monitor-previous; }
-    Mod+O           { move-window-to-monitor-next; }
+    Mod+O           { move-window-to-monitor-previous; }
+    Mod+I           { move-window-to-monitor-next; }
 
     // Layout. H/L grow and shrink the column by 5% -- Hyprland's comments
     // call these incmwfact(+-0.05), which niri can express exactly.
