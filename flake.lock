@@ -46,11 +46,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1791306979,
-        "narHash": "sha256-KuLePuhwJM9NLt/gTLHzXaOoSZKGoB3m7NfXjiQ98HY=",
+        "lastModified": 1792495086,
+        "narHash": "sha256-TyoYH983Nsc++1scw0SoOEKshPSJWJDxK7tTmuZ974M=",
         "owner": "nix-community",
         "repo": "home-manager",
-        "rev": "fae6e9e42c3b762ab47635cddcfaf6f52374a61b",
+        "rev": "ec80131710bffcdf3b8498cf41f3a0579833b023",
         "type": "github"
       },
       "original": {
@@ -68,11 +68,11 @@
         "systems": "systems"
       },
       "locked": {
-        "lastModified": 1791395665,
-        "narHash": "sha256-KShaHLJhf+fwAUd5P/zwScfXyDXEmM2/+sVjVlg5ZqI=",
+        "lastModified": 1791479100,
+        "narHash": "sha256-WX29gJjGk1Y+3n6JLZ5bAR8DlgudZxou6+DUy2FBhF8=",
         "ref": "refs/heads/main",
-        "rev": "84b4f6a316a80c76df53fd8009d0974295c6e779",
-        "revCount": 40,
+        "rev": "0b691e28a9302820027e0dddc505e6d9119bae16",
+        "revCount": 43,
         "type": "git",
         "url": "ssh://git@github.com/teczito/meal-planner"
       },
@@ -131,11 +131,11 @@
     },
     "nixpkgs_2": {
       "locked": {
-        "lastModified": 1791260994,
-        "narHash": "sha256-Miqqk/ammqnTUxaoCyvtwoPeLbI1ksFyLxi/CazZpWY=",
+        "lastModified": 1792502884,
+        "narHash": "sha256-IoNisKcGbUjdd45qCqywGMCYmZ5EnkxezvLII0FWwNA=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "151fa4e8ddfdd8dd25d945ad94ed54a13de9f6e4",
+        "rev": "02c087f3fe673c9e317f206a627cb6b910336dbe",
         "type": "github"
       },
       "original": {
