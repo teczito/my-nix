@@ -381,6 +381,19 @@ need it back.
 - **The laptop panel stays on when docked.** niri's config has no conditionals, and a static `off` would
   leave an undocked laptop with no display. Toggle it with `niri msg output eDP-1 off|on`.
 
+**The zbook dual-boots Windows (`nvme0n1`), and booting it can leave the dock's monitors undetected in
+later NixOS boots.** Seen on 2026-11-05. After a Windows session, two NixOS boots in a row came up with
+only `eDP-1`. The dock's USB side (keyboard, mouse, NIC) enumerated normally, but i915 never exposed the
+DP-4/5/6 connectors, and neither the kernel nor niri logged any error. The dock is USB-C DP alt mode, not
+Thunderbolt (`/sys/bus/thunderbolt/devices` holds only the host, and there is no `typec` class), so the
+display path is negotiated by the HP EC firmware where Linux cannot see it. Reboots and re-plugging the
+cable did not fix it. A full power-off of the laptop *and* the dock did. The config was ruled out because
+the same system generation produced both good and bad boots. Prime suspect: Windows Fast Startup, which
+makes "Shut down" a partial hibernate. The fingerprint: the first boot after Windows has the hardware
+clock exactly 1 h fast, because Windows keeps it in local time; timesyncd then logs "Time jumped
+backwards". If the monitors are missing, ask about Windows and power-cycle before debugging niri, i915 or
+the config.
+
 **The rescue console is `Ctrl+Alt+F2` (or F3-F6) — the session itself is on VT1.** This inverted when
 greetd replaced lightdm, and the old advice has become exactly the trap it was written to warn about.
 
