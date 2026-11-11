@@ -159,6 +159,8 @@ screenshot-path "~/Pictures/Screenshots/Screenshot from %Y-%m-%d %H-%M-%S.png"
 
 binds {
     Mod+Shift+A { show-hotkey-overlay; }
+    Mod+D            hotkey-overlay-title="Turn laptop screen off" { spawn "niri" "msg" "output" "eDP-1" "off"; }
+    Mod+Shift+D      hotkey-overlay-title="Turn laptop screen on" { spawn "niri" "msg" "output" "eDP-1" "on"; }
 
     // Launchers -- identical to Hyprland.
     Mod+Return       hotkey-overlay-title="Terminal"     { spawn "kitty"; }
