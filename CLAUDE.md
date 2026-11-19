@@ -74,7 +74,8 @@ overrides that make this machine different. `modules/` holds what a host opts in
   `devices.nix`, `dns.nix`, `docker.nix`, `llm.nix`, `meal-planner.nix`, `printing.nix`,
   `virtualisation.nix`, `caddy.nix`.
 
-`users/`, `pkgs/`, `overlays/` and `config-files/` stay at the top level because they are not per-host.
+`users/`, `pkgs/`, `overlays/`, `config-files/` and `templates/` stay at the top level because they are not
+per-host.
 
 A module owns the packages its concern needs, so `environment.systemPackages` is defined in six places and
 merged: `btrbk` in `backup.nix`, `xwayland-satellite` in `niri.nix`, `android-tools` in `devices.nix`, and so
@@ -120,6 +121,28 @@ merges them, so `home.packages`, `extraGroups` and `shellAliases` accumulate acr
 
 `home.stateVersion` deliberately does *not* live in either: like `system.stateVersion` it is a per-machine
 compatibility marker, so the host sets it. `users/teczito.nix` exists but is not imported.
+
+**direnv and `flakify`.** direnv comes from home-manager's `programs.direnv` with `nix-direnv.enable`, in
+`users/ruben/default.nix`. That gives cached dev shells with a GC root and installs the bash hook, so
+there is no `direnv` package entry and no `eval "$(direnv hook bash)"` anywhere. Do not add either back.
+
+`flakify` turns the current directory into a direnv-loaded flake dev shell. It is a `writeShellApplication`
+in `home.packages`, not a bashrc function, and it is idempotent:
+
+- It copies `templates/devshell/flake.nix` from the store, so nothing is fetched. That template is the
+  place to change what every new project gets. It always includes `claude-code`, alongside `nixd` and
+  `nixfmt`.
+- The template imports nixpkgs with `allowUnfreePredicate` listing only `claude-code`. It cannot use
+  `nixpkgs.legacyPackages`, which ignores the system's `allowUnfree` and fails on `claude-code`. Add to
+  that list for any new unfree package.
+- It locks nixpkgs with `--override-input nixpkgs github:NixOS/nixpkgs/$(nixos-version --revision)`, so a
+  new project uses the running system's nixpkgs and its shell is already in the store. The lock's
+  `original` stays `nixos-unstable`, so `nix flake update` in the project moves it normally.
+- In a git repo, it runs `git add -N` on each file it creates *before* `nix flake lock`. Flakes cannot see
+  untracked files, not even to lock them. Doing the lock first fails with "is not tracked by Git".
+- `.envrc` is meant to be committed. Only `.direnv/` goes in `.gitignore`.
+
+`nixify` (a `use nix` + `<nixpkgs>` shell) is still a bashrc function and uses channels.
 
 **Backups** are mechanism and policy, in two files. `modules/services/backup.nix` declares
 `local.btrbk.jobs`, an `attrsOf submodule` where each entry generates all three pieces from one name:
