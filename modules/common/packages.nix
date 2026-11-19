@@ -11,7 +11,6 @@
   # bench-hardware ones in modules/services/devices.nix. To search, run:
   # $ nix search wget
   environment.systemPackages = with pkgs; [
-    direnv
     git
     mc
     nixfmt

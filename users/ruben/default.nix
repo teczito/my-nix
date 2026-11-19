@@ -19,7 +19,6 @@
       home.packages = with pkgs; [
         bat
         cntr
-        direnv
         htop
         nix-index
         nix-tree
@@ -41,7 +40,63 @@
             exec tmux new-session
           '';
         })
+
+        # Turn the current directory into a direnv-loaded flake dev shell
+        # (claude-code, nixd, nixfmt). The template is copied from the store,
+        # so nothing is fetched, and nixpkgs is locked to the running system's
+        # revision, so the shell is already built. `original` in the lock stays
+        # nixos-unstable, so a later `nix flake update` moves it normally.
+        (writeShellApplication {
+          name = "flakify";
+          runtimeInputs = [
+            config.programs.direnv.package
+            coreutils
+            git
+            gnugrep
+          ];
+          text = ''
+            in_git=false
+            if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then in_git=true; fi
+
+            # Flakes cannot see untracked files, not even to lock them;
+            # intent-to-add tracks a file without staging its content.
+            track() {
+              if $in_git; then git add -N "$@"; fi
+            }
+
+            if [ ! -e flake.nix ]; then
+              install -m644 ${../../templates/devshell/flake.nix} flake.nix
+              track flake.nix
+              if rev=$(nixos-version --revision 2>/dev/null) && [ -n "$rev" ]; then
+                nix flake lock --override-input nixpkgs "github:NixOS/nixpkgs/$rev"
+              else
+                nix flake lock
+              fi
+              track flake.lock
+            fi
+
+            if [ ! -e .envrc ]; then
+              echo "use flake" > .envrc
+              track .envrc
+            fi
+
+            if $in_git && ! grep -qxF '.direnv/' .gitignore 2>/dev/null; then
+              echo '.direnv/' >> .gitignore
+              track .gitignore
+            fi
+
+            direnv allow
+            "''${EDITOR:-vim}" flake.nix
+          '';
+        })
       ];
+
+      # nix-direnv: cached dev shells with a GC root, and `use flake` without
+      # sourcing direnvrc from the network. Also installs the bash hook.
+      programs.direnv = {
+        enable = true;
+        nix-direnv.enable = true;
+      };
 
       programs.tmux = {
         enable = true;
@@ -169,19 +224,6 @@
             fi
           }
 
-          flakify() {
-            if [ ! -e flake.nix ]; then
-              nix flake new -t github:nix-community/nix-direnv .
-              echo ".direnv/" >> .gitignore
-              echo ".envrc" >> .gitignore
-            elif [ ! -e .envrc ]; then
-              echo "use flake" > .envrc
-              direnv allow
-            fi
-            vim flake.nix
-          }
-
-          eval "$(direnv hook bash)"
         '';
         shellAliases = {
           mb = "cd ~/github.com/current-booster/libmodbus-cpp";
