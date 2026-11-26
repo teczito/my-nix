@@ -132,6 +132,15 @@
           bind | split-window -h -c "#{pane_current_path}"
           bind - split-window -v -c "#{pane_current_path}"
           bind C-c new-window -c "#{pane_current_path}"
+
+          # prefix C-s: ssh to the server in a new window, tinted so it cannot
+          # be mistaken for a local shell. The options are window-scoped, so
+          # they go away with the window when ssh exits.
+          bind C-s new-window -n server "ssh ruben@192.168.68.105" \; \
+            set-option -w window-style "bg=#2a1215" \; \
+            set-option -w window-active-style "bg=#2a1215" \; \
+            set-option -w window-status-style "bg=#5c1a1f,fg=#ffffff" \; \
+            set-option -w window-status-current-style "bg=#c01c28,fg=#ffffff,bold"
         '';
       };
 
